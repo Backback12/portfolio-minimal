@@ -1,0 +1,124 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import { getCollection, render } from 'astro:content';
+
+const projects = await getCollection('projects');
+---
+
+<Layout title="All Projects">
+  <div class="page-header">
+    <h1 class="page-title">Projects</h1>
+    <p class="page-subtitle">A comprehensive archive of my hardware builds, software tools, and embedded systems research.</p>
+    
+    <div class="sort-container">
+      <label for="sort-select" class="font-bold text-sm uppercase tracking-wider">Sort by:</label>
+      <select id="sort-select" class="sort-dropdown">
+        <!-- <option value="default">Default</option> -->
+        <option value="date-desc">Newest First</option>
+        <option value="date-asc">Oldest First</option>
+        <option value="title-asc">Title (A-Z)</option>
+        <option value="title-desc">Title (Z-A)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="projects-grid" id="project-grid">
+    {projects.map(async (project) => {
+      const { Content } = await render(project);
+      
+      return (
+        <div 
+          class="project-wrapper" 
+          data-title={project.data.title.toLowerCase()} 
+          data-date={project.data.sortDate ? new Date(project.data.sortDate).getTime() : 0}
+          data-order={project.data.order || 999}
+        >
+          <ProjectCard 
+            title={project.data.title} 
+            date={project.data.date} 
+            image={project.data.image}
+            id={project.id} 
+          >
+            <Content />
+          </ProjectCard>
+        </div>
+      );
+    })}
+  </div>
+</Layout>
+
+<style>
+  @reference "../styles/global.css";
+
+  .page-header {
+    @apply mb-12 text-center border-b-4 border-black pb-6 max-w-2xl mx-auto flex flex-col items-center;
+  }
+
+  .page-title {
+    @apply text-4xl font-black mb-4 uppercase tracking-tight;
+  }
+
+  .page-subtitle {
+    @apply text-gray-700 font-bold mb-6;
+  }
+
+  .sort-container {
+    @apply flex items-center space-x-3 bg-gray-50 border-2 border-black rounded-xl px-4 py-2;
+  }
+
+  .sort-dropdown {
+    @apply bg-transparent outline-none font-bold cursor-pointer text-black;
+  }
+
+  .projects-grid {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-5xl mx-auto;
+  }
+</style>
+
+<script>
+  // This runs in the browser to handle the dynamic sorting
+  document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('sort-select')!;
+    const grid = document.getElementById('project-grid')!;
+    // Store the original order so we can easily revert to "Default"
+    const originalOrder = Array.from(grid.children);
+
+    select.addEventListener('change', (e) => {
+      const sortBy = (e.target as HTMLSelectElement).value;
+      const items = Array.from(grid.children) as HTMLElement[];
+
+      // if (sortBy === 'default') {
+      //   originalOrder.forEach(item => grid.appendChild(item));
+      //   return;
+      // }
+
+      items.sort((a, b) => {
+        const titleA = a.dataset.title || '';
+        const titleB = b.dataset.title || '';
+        const dateA = parseInt(a.dataset.date || '0');
+        const dateB = parseInt(b.dataset.date || '0');
+        const orderA = parseInt(a.dataset.order || '999');
+        const orderB = parseInt(b.dataset.order || '999');
+
+        switch (sortBy) {
+          case 'title-asc':
+            return titleA.localeCompare(titleB);
+          case 'title-desc':
+            return titleB.localeCompare(titleA);
+          case 'date-asc':
+            return dateA - dateB;
+          case 'date-desc':
+          case 'default':
+          default:
+            return dateB - dateA;
+            // return orderB - orderA;
+        }
+      });
+      
+      items.forEach(item => grid.appendChild(item));
+    });
+    const changeEvent = new Event('change');
+    select.dispatchEvent(changeEvent);
+  });
+</script>

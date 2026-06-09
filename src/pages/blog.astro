@@ -1,0 +1,32 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BlogCard from '../components/BlogCard.astro';
+import { getCollection, render } from 'astro:content';
+
+// Fetch all markdown files from src/content/blog/
+const posts = await getCollection('blog');
+---
+
+<Layout title="Blog">
+  <div class="mb-12 text-center border-b-4 border-black pb-6 max-w-2xl mx-auto">
+    <h1 class="text-4xl font-black mb-4 uppercase tracking-tight">Blog</h1>
+    <p class="text-gray-700 font-bold">Something</p>
+  </div>
+
+  <div class="w-full max-w-3xl mx-auto flex flex-col">
+    {posts.map(async (post) => {
+      const { Content } = await render(post);
+      
+      return (
+        <BlogCard 
+          title={post.data.title} 
+          date={post.data.date} 
+          description={post.data.description}
+          slug={post.id}
+        >
+          <Content />
+        </BlogCard>
+      );
+    })}
+  </div>
+</Layout>

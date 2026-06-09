@@ -1,0 +1,72 @@
+---
+import Layout from '../layouts/Layout.astro';
+import CvItem from '../components/CvItem.astro';
+---
+
+<Layout title="CV / Resume">
+  <!-- Header / Socials -->
+  <div class="text-center mb-12">
+    <h1 class="text-3xl font-bold mb-2">Connor</h1>
+    <div class="flex justify-center space-x-4 text-gray-600 text-sm">
+      <span>connor@example.com</span>
+      <span>•</span>
+      <span>github.com/connor</span>
+      <span>•</span>
+      <span>Winnipeg, MB</span>
+    </div>
+  </div>
+
+  <!-- Employment -->
+  <section class="mb-10">
+    <h2 class="text-2xl font-bold border-b border-gray-300 pb-2 mb-6">Employment</h2>
+    <div class="space-y-6">
+      <CvItem 
+        company="ARxIUM" 
+        role="Software Developer" 
+        date="May 2026 - Present" 
+        location="Winnipeg, MB" 
+        image="/images/tech-logo.png"
+        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+      />
+      <CvItem 
+        company="ARxIUM" 
+        role="Software Developer Intern" 
+        date="Jun 2025 - Aug 2025" 
+        location="Winnipeg, MB" 
+        image="/images/tech-logo.png"
+        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+      />
+      <CvItem 
+        company="New Flyer" 
+        role="Junior Designer - Electrical Engineer" 
+        date="Jan 2024 - Aug 2024" 
+        location="Winnipeg, MB" 
+        image="/images/tech-logo.png"
+        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+      />
+    </div>
+  </section>
+
+  <!-- Extracurriculars -->
+  <section>
+    <h2 class="text-2xl font-bold border-b border-gray-300 pb-2 mb-6">Extracurriculars</h2>
+    <div class="space-y-6">
+      <CvItem 
+        company="University of Manitoba IEEE Student Branch (UMIEEE)" 
+        role="Treasurer - Member" 
+        date="Apr 2025 - Apr 2026" 
+        location="Winnipeg, MB" 
+        image="/images/ieee-logo.png"
+        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+      />
+      <CvItem 
+        company="University of Manitoba Robotics Team (UMRT)" 
+        role="Founder - Treasurer - Communication Operations System Lead" 
+        date="Jun 2023 - Present" 
+        location="Winnipeg, MB" 
+        image="/images/umrt-logo.png"
+        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+      />
+    </div>
+  </section>
+</Layout>

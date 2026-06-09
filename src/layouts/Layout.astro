@@ -1,0 +1,40 @@
+---
+import '../styles/global.css';
+
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+const { title } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{title}</title>
+  </head>
+  <script>
+    document.addEventListener('click', (event) => {
+      const dialogs = document.querySelectorAll('dialog');
+      dialogs.forEach(dialog => {
+        if (dialog.open) {
+          const rect = dialog.getBoundingClientRect();
+          const isInDialog = (rect.top <= event.clientY && event.clientY <= rect.top + rect.height
+            && rect.left <= event.clientX && event.clientX <= rect.left + rect.width);
+          
+          if (!isInDialog && event.target === dialog) {
+            dialog.close();
+          }
+        }
+      });
+    });
+  </script>
+  <body class="min-h-screen flex flex-col max-w-4xl mx-auto px-4 text-center">
+    <Header />
+    <main class="flex-grow py-8 flex flex-col items-center">
+      <div class="w-full">
+        <slot />
+      </div>
+    </main>
+    <Footer />
+  </body>
+</html>
