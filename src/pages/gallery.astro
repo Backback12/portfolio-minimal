@@ -1,0 +1,62 @@
+---
+import Layout from '../layouts/Layout.astro';
+import GalleryCard from '../components/GalleryCard.astro';
+---
+
+<Layout title="Photo Gallery">
+  <div class="page-header">
+    <h1 class="page-title">Gallery</h1>
+    <p class="page-subtitle">Cool pics</p>
+  </div>
+
+  <div class="gallery-grid">
+    <GalleryCard
+      title="PanUp.webp"
+      date="August 2025"
+      location="Drumheller, AB"
+      image="/gallery/PanUp.webp"
+      description="Drone footage taken at CIRC 2025."
+    />
+    <GalleryCard
+      title="QuickSpin.webp"
+      date="August 2025"
+      location="Drumheller, AB"
+      image="/gallery/QuickSpin.webp"
+      description="Drone footage taken at CIRC 2025."
+    />
+    <GalleryCard
+      title="SpeedOver.webp"
+      date="August 2025"
+      location="Drumheller, AB"
+      image="/gallery/SpeedOver.webp"
+      description="Drone footage taken at CIRC 2025."
+    />
+    <GalleryCard
+      title="ZoomOutClip.webp"
+      date="August 2025"
+      location="Drumheller, AB"
+      image="/gallery/ZoomOutClip.webp"
+      description="Drone footage taken at CIRC 2025."
+    />
+  </div>
+</Layout>
+
+<style>
+  @reference "../styles/global.css";
+
+  .page-header {
+    @apply mb-12 text-center border-b-4 border-black pb-6 max-w-2xl mx-auto flex flex-col items-center;
+  }
+
+  .page-title {
+    @apply text-4xl font-black mb-4 uppercase tracking-tight;
+  }
+
+  .page-subtitle {
+    @apply text-gray-700 font-bold max-w-md;
+  }
+
+  .gallery-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl mx-auto px-4;
+  }
+</style>

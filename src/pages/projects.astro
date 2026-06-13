@@ -3,13 +3,19 @@ import Layout from '../layouts/Layout.astro';
 import ProjectCard from '../components/ProjectCard.astro';
 import { getCollection, render } from 'astro:content';
 
-const projects = await getCollection('projects');
+const projectsSource = await getCollection('projects');
+
+const projects = projectsSource.sort((a, b) => {
+  const dateA = a.data.sortDate ? new Date(a.data.sortDate).getTime() : 0;
+  const dateB = b.data.sortDate ? new Date(b.data.sortDate).getTime() : 0;
+  return dateB - dateA;
+});
 ---
 
 <Layout title="All Projects">
   <div class="page-header">
     <h1 class="page-title">Projects</h1>
-    <p class="page-subtitle">A comprehensive archive of my hardware builds, software tools, and embedded systems research.</p>
+    <p class="page-subtitle">A collection of some projects I worked on</p>
     
     <div class="sort-container">
       <label for="sort-select" class="font-bold text-sm uppercase tracking-wider">Sort by:</label>
@@ -118,7 +124,5 @@ const projects = await getCollection('projects');
       
       items.forEach(item => grid.appendChild(item));
     });
-    const changeEvent = new Event('change');
-    select.dispatchEvent(changeEvent);
   });
 </script>

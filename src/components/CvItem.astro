@@ -1,24 +1,46 @@
 ---
 const { company, role, date, location, image, description } = Astro.props;
 ---
-<div class="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] gap-4 sm:gap-6 w-full max-w-3xl mx-auto mb-8 items-start text-black">
+<div class="cv-item">
   
-  <!-- Column 1: Square Thumbnail -->
-  <div class="w-16 h-16 bg-gray-50 border-2 border-black flex items-center justify-center overflow-hidden flex-shrink-0">
-     <!-- <img src={image} alt={company} class="w-full h-full object-cover" /> -->
+  <div class="image-container">
+     <img class="image" src={image} alt={company} />
   </div>
   
-  <!-- Column 2: Information (Left Aligned) -->
   <div class="text-left flex flex-col justify-start">
     <span class="font-black text-xl">{company}</span>
     <span class="font-bold text-gray-700 mb-1">{role}</span>
     <span class="text-sm leading-relaxed mt-2">{description}</span>
   </div>
   
-  <!-- Column 3: Date & Location (Right Aligned on desktop, left on mobile) -->
   <div class="sm:text-right flex flex-col flex-shrink-0">
     <span class="font-bold uppercase tracking-wider text-sm">{date}</span>
     {location && <span class="text-gray-500 text-sm font-medium mt-1">{location}</span>}
   </div>
 
 </div>
+
+<style>
+@reference "../styles/global.css";
+
+.cv-item {
+  @apply grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] 
+  gap-4 sm:gap-6 w-full max-w-3xl mx-auto items-start text-black;
+}
+
+.image-container {
+  @apply w-10 h-10 bg-gray-50 border-1 border-gray-400 
+  flex items-center justify-center 
+  overflow-hidden 
+  flex-shrink-0
+  rounded-sm
+  p-1;
+}
+
+.image {
+  @apply w-full h-full object-contain;
+}
+
+
+
+</style>

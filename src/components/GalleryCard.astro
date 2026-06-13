@@ -1,0 +1,66 @@
+---
+interface Props {
+  title: string;
+  date: string;
+  location: string;
+  image: string;
+  description: string;
+}
+
+const { title, date, location, image, description } = Astro.props;
+---
+
+<div class="gallery-card">
+  <div class="image-container">
+    <img src={image} alt={title} loading="lazy" />
+  </div>
+  <div class="card-content">
+    <!-- <div class="meta-row">
+      <span class="meta-tag">{date}</span>
+      <span class="meta-tag">{location}</span>
+    </div> -->
+    <h3 class="card-title">{title}</h3>
+    <p class="card-description">{description}</p>
+  </div>
+</div>
+
+<style>
+  @reference "../styles/global.css";
+
+  .gallery-card {
+    @apply block w-full border-2 
+    border-gray-400 rounded-2xl 
+    overflow-hidden 
+    hover:-translate-y-1 
+    hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] 
+    transition-all bg-white mb-6 text-left cursor-pointer;
+  }
+
+  .image-container {
+    @apply h-48 border-b-2 border-black bg-gray-50 flex items-center justify-center overflow-hidden;
+  }
+
+  .image-container img {
+    @apply w-full h-full object-cover object-center;
+  }
+
+  .card-content {
+    @apply px-6 py-2 flex flex-col flex-grow;
+  }
+
+  .meta-row {
+    @apply flex gap-2 mb-3 text-xs uppercase font-black tracking-wider;
+  }
+
+  .meta-tag {
+    @apply bg-gray-100 border-2 border-black rounded-md px-2 py-0.5;
+  }
+
+  .card-title {
+    @apply text-lg font-black tracking-tight text-black;
+  }
+
+  .card-description {
+    @apply text-gray-700 font-bold text-sm leading-relaxed;
+  }
+</style>
