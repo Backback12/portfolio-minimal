@@ -3,7 +3,6 @@ import Layout from '../layouts/Layout.astro';
 import BlogCard from '../components/BlogCard.astro';
 import { getCollection, render } from 'astro:content';
 
-// Fetch all markdown files from src/content/blog/
 const posts = await getCollection('blog');
 ---
 

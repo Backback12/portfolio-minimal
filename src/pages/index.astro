@@ -6,7 +6,7 @@ import { getCollection, render } from 'astro:content';
 
 const allProjects = await getCollection('projects');
 
-const featuredProjectIds = ['micromouse', 'balance-bot'];
+const featuredProjectIds = ['micromouse', 'balance-bot', 'sumo-bot'];
 
 const featuredProjects = allProjects.filter(project => 
   featuredProjectIds.includes(project.id)
@@ -55,7 +55,7 @@ const featuredProjects = allProjects.filter(project =>
       date="May 2026"
       location="Montreal, QB"
       image="/images/no-image.png"
-      description="UMIEEE/UMRT at Concirdia University"
+      description="UMIEEE/UMRT at Concordia University"
     />
     <EventCard
       event="UMake 2026"

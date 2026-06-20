@@ -9,4 +9,3 @@ image: "/projects/micromouse.jpg"
 ### Project Overview
 Project overview
 
-![Custom PCB Design](/images/pcb-render.jpg)

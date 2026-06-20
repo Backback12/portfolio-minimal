@@ -1,6 +1,6 @@
 ---
-const { title, date, description, id } = Astro.props;
-const modalId = `modal-blog-${id}`;
+const { title, date, description, image } = Astro.props;
+const modalId = `modal-blog-${title}`;
 ---
 
 <button 
@@ -8,7 +8,8 @@ const modalId = `modal-blog-${id}`;
   class="group flex flex-col sm:flex-row items-center w-full border-2 border-black rounded-2xl p-4 sm:p-6 mb-6 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all bg-white text-left cursor-pointer"
 >
   <div class="w-full sm:w-32 h-24 border-2 border-black bg-gray-50 rounded-xl flex-shrink-0 mb-4 sm:mb-0 sm:mr-6 flex items-center justify-center overflow-hidden">
-     <span class="text-gray-400 text-xs font-bold">[ Img ]</span>
+     <!-- <span class="text-gray-400 text-xs font-bold">[ Img ]</span> -->
+     <img class="image" src={image} alt={title} />
   </div>
   <div class="flex-grow">
     <div class="text-xs font-bold uppercase tracking-widest mb-1 text-gray-500">{date}</div>

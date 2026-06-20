@@ -9,5 +9,4 @@ image: "/projects/balance-bot_1.png"
 ### Project Overview
 Hello, project information
 
-![Custom PCB Design](/images/pcb-render.jpg)
 
