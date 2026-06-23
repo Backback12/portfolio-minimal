@@ -1,0 +1,197 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Playground">
+  <!-- <div class="mb-12 text-center border-b-4 border-black pb-6 max-w-2xl mx-auto mt-10">
+    <h1 class="text-4xl font-black mb-4 uppercase tracking-tight">Playground</h1>
+    <p class="text-gray-700 font-bold">Simulation Environment</p>
+  </div> -->
+  
+  <div 
+    id="canvas-container" 
+    class="w-[80vw] h-[600px] max-w-5xl mx-auto cursor-crosshair overflow-hidden relative"
+  >
+    <!-- <div class="absolute inset-0 bg-slate-50 -z-10" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px;"></div> -->
+  </div>
+</Layout>
+
+<script>
+  import * as THREE from 'three';
+  import { Agent } from '../utils/agent.js';
+
+  let container, scene, camera, renderer;
+  let agents = [];
+  let obstacles = [];
+  
+  const MAP_SIZE = 24; 
+  const bounds = { xMin: -MAP_SIZE/2, xMax: MAP_SIZE/2, zMin: -MAP_SIZE/2, zMax: MAP_SIZE/2 };
+
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let activeHoveredAgent = null;
+
+  function init() {
+    container = document.getElementById('canvas-container');
+    
+    scene = new THREE.Scene();
+
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    const aspect = width / height;
+    const frustumSize = 20;
+
+    camera = new THREE.OrthographicCamera(
+      (frustumSize * aspect) / -2, (frustumSize * aspect) / 2,
+      frustumSize / 2, frustumSize / -2,
+      1, 1000
+    );
+    camera.position.set(20, 15, 20);
+    camera.lookAt(0, 0, 0);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(15, 30, 10);
+    dirLight.castShadow = true;
+    
+    dirLight.shadow.camera.left = -MAP_SIZE;
+    dirLight.shadow.camera.right = MAP_SIZE;
+    dirLight.shadow.camera.top = MAP_SIZE;
+    dirLight.shadow.camera.bottom = -MAP_SIZE;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    scene.add(dirLight);
+
+    const floorGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE);
+    const floorMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    spawnObstacles();
+    spawnAgents();
+
+    const resizeObserver = new ResizeObserver(() => onResize());
+    resizeObserver.observe(container);
+
+    container.addEventListener('mousemove', onMouseMove);
+  }
+
+  function spawnObstacles() {
+    const obstacleConfigs = [
+      // { x: -4, z: -3, radius: 1.2, height: 3, color: 0x94a3b8 },
+      // { x: 5, z: 6, radius: 1.5, height: 2, color: 0x94a3b8 }
+    ];
+
+    obstacleConfigs.forEach((cfg) => {
+      const geo = new THREE.CylinderGeometry(cfg.radius, cfg.radius, cfg.height, 16);
+      const mat = new THREE.MeshLambertMaterial({ color: cfg.color });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(cfg.x, cfg.height / 2, cfg.z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+
+      obstacles.push({ mesh: mesh, position: mesh.position, radius: cfg.radius });
+    });
+  }
+
+  function spawnAgents() {
+    const configs = [
+      { name: 'Maze Bot', type: 'car', modelUrl: '/models/maze_bot.glb', rotation: -Math.PI / 2, scale: 0.5, hitboxScale: 1.6 },
+      { name: 'Prairie Pioneer', type: 'car', modelUrl: '/models/prairie_pioneer.glb', rotation: -Math.PI / 2, scale: 2, hitboxScale: 1.6 },
+      { name: 'Project Perry', type: 'car', modelUrl: '/models/project_perry.glb', rotation: -Math.PI / 2, scale: 2, hitboxScale: 1.6 },
+      { name: 'Sumo Bot', type: 'car', modelUrl: '/models/sumo_bot.glb', rotation: -Math.PI / 2, scale: 0.5, hitboxScale: 1.6, speedScale: 3 }
+    ];
+
+    configs.forEach((cfg, i) => {
+      const randomStartPos = new THREE.Vector3(
+        THREE.MathUtils.randFloat(bounds.xMin + 3, bounds.xMax - 3),
+        0, 
+        THREE.MathUtils.randFloat(bounds.zMin + 3, bounds.zMax - 3)
+      );
+
+      const agent = new Agent(i, cfg.name, cfg.type, scene, bounds, randomStartPos, cfg.modelUrl, cfg.scale, cfg.rotation, cfg.hitboxScale, cfg.speedScale);
+      agents.push(agent);
+    });
+  }
+
+  function onMouseMove(event) {
+    const rect = container.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  }
+
+  function handleInteractions() {
+    raycaster.setFromCamera(mouse, camera);
+    
+    const agentMeshes = agents.map(a => a.mesh);
+    const intersects = raycaster.intersectObjects(agentMeshes, true);
+
+    if (intersects.length > 0) {
+      let rootMesh = intersects[0].object;
+      while (rootMesh.parent && rootMesh.parent !== scene) {
+        rootMesh = rootMesh.parent;
+      }
+
+      const matchedAgent = agents.find(a => a.mesh === rootMesh);
+      
+      if (activeHoveredAgent && activeHoveredAgent !== matchedAgent) {
+        activeHoveredAgent.setHoverState(false);
+      }
+
+      if (matchedAgent) {
+        activeHoveredAgent = matchedAgent;
+        matchedAgent.setHoverState(true);
+        return;
+      }
+    }
+
+    if (activeHoveredAgent) {
+      activeHoveredAgent.setHoverState(false);
+      activeHoveredAgent = null;
+    }
+  }
+
+  function onResize() {
+    if (!container) return;
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    const aspect = width / height;
+    const frustumSize = 20;
+
+    camera.left = (frustumSize * aspect) / -2;
+    camera.right = (frustumSize * aspect) / 2;
+    camera.top = frustumSize / 2;
+    camera.bottom = frustumSize / -2;
+    
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+  }
+
+  function animate(time) {
+    requestAnimationFrame(animate);
+    const timestampSeconds = time * 0.001;
+
+    agents.forEach(agent => {
+      // Pass the agents array alongside obstacles
+      if(agent.update) agent.update(obstacles, agents, timestampSeconds);
+    });
+
+    handleInteractions();
+    renderer.render(scene, camera);
+  }
+
+  init();
+  requestAnimationFrame(animate);
+</script>
