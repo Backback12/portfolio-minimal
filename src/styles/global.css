@@ -7,11 +7,9 @@
     font-family: Georgia, 'Times New Roman', Times, serif;
   }
 
-  body {
+  /* body {
     background-color: white;
     color: black;
-    
-    /* background-color: #fcfbfa;  */
     
     background-image: radial-gradient(#e0dfde 0.5px, transparent 1px);
     background-size: 24px 24px;
@@ -19,5 +17,22 @@
     filter: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://w3.org id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
 
     
-  }
+  } */
+   body {
+  /* 1) Paper color */
+  background-color: #ffffff;
+
+  color: #000000;
+
+  /* 2) Grid lines: first color = vertical lines, second = horizontal lines */
+  background-image:
+    linear-gradient(to right, #f3f1ee 1px, transparent 1px),
+    linear-gradient(to bottom, #f3f1ee 1px, transparent 1px);
+
+  /* 3) Square size: change both values to make cells bigger/smaller */
+  background-size: 4vh 4vh;
+
+  /* 4) Optional subtle texture/noise */
+  filter: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+}
 }

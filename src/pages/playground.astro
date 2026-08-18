@@ -108,10 +108,10 @@ import Layout from '../layouts/Layout.astro';
 
   function spawnAgents() {
     const configs = [
-      { name: 'Maze Bot', type: 'car', modelUrl: '/models/maze_bot.glb', rotation: -Math.PI / 2, scale: 0.5, hitboxScale: 1.6 },
-      { name: 'Prairie Pioneer', type: 'car', modelUrl: '/models/prairie_pioneer.glb', rotation: -Math.PI / 2, scale: 2, hitboxScale: 1.6 },
-      { name: 'Project Perry', type: 'car', modelUrl: '/models/project_perry.glb', rotation: -Math.PI / 2, scale: 2, hitboxScale: 1.6 },
-      { name: 'Sumo Bot', type: 'car', modelUrl: '/models/sumo_bot.glb', rotation: -Math.PI / 2, scale: 0.5, hitboxScale: 1.6, speedScale: 3 }
+      { name: 'Maze Bot', type: 'car', modelUrl: '/models/maze_bot.glb', rotation: -Math.PI / 2, scale: 0.5, hitboxScale: 1.0 },
+      { name: 'Prairie Pioneer', type: 'car', modelUrl: '/models/prairie_pioneer.glb', rotation: -Math.PI / 2, scale: 2, hitboxScale: 1.8 },
+      { name: 'Project Perry', type: 'car', modelUrl: '/models/project_perry.glb', rotation: -Math.PI / 2, scale: 2, hitboxScale: 1.8 },
+      { name: 'Sumo Bot', type: 'car', modelUrl: '/models/sumo_bot.glb', rotation: -Math.PI / 2, scale: 0.5, hitboxScale: 1.0, speedScale: 3 }
     ];
 
     configs.forEach((cfg, i) => {
