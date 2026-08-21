@@ -28,13 +28,15 @@ const { title } = Astro.props;
       });
     });
   </script>
-  <body class="min-h-screen flex flex-col max-w-4xl mx-auto px-4 text-center">
+  <body class="min-h-screen flex flex-col w-full m-0 text-center">
     <Header />
-    <main class="flex-grow py-8 flex flex-col items-center">
+
+    <main class="flex-grow w-full py-8 flex flex-col items-center">
       <div class="w-full">
         <slot />
       </div>
     </main>
+
     <Footer />
   </body>
 </html>
