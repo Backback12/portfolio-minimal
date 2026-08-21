@@ -57,65 +57,79 @@ import Layout from '../layouts/Layout.astro';
 
   let previousPinchDistance = null;
 
+  let initialized = false;
+
   function init() {
     container = document.getElementById('canvas-container');
-    
-    scene = new THREE.Scene();
+    if (!isWebGLAvailable()) {
+      showWebGLError();
+      return;
+    }
 
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    const aspect = width / height;
-    const frustumSize = 20;
+    try {
+      scene = new THREE.Scene();
 
-    camera = new THREE.OrthographicCamera(
-      (frustumSize * aspect) / -2, (frustumSize * aspect) / 2,
-      frustumSize / 2, frustumSize / -2,
-      1, 1000
-    );
-    // camera.position.set(20, 15, 20);
-    // camera.lookAt(0, 0, 0);
-    updateCamera();
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      const aspect = width / height;
+      const frustumSize = 20;
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    container.appendChild(renderer.domElement);
+      camera = new THREE.OrthographicCamera(
+        (frustumSize * aspect) / -2, (frustumSize * aspect) / 2,
+        frustumSize / 2, frustumSize / -2,
+        1, 1000
+      );
+      // camera.position.set(20, 15, 20);
+      // camera.lookAt(0, 0, 0);
+      updateCamera();
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    dirLight.position.set(15, 30, 10);
-    dirLight.castShadow = true;
-    
-    dirLight.shadow.camera.left = -MAP_SIZE;
-    dirLight.shadow.camera.right = MAP_SIZE;
-    dirLight.shadow.camera.top = MAP_SIZE;
-    dirLight.shadow.camera.bottom = -MAP_SIZE;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    scene.add(dirLight);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambientLight);
 
-    const floorGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE);
-    const floorMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      dirLight.position.set(15, 30, 10);
+      dirLight.castShadow = true;
+      
+      dirLight.shadow.camera.left = -MAP_SIZE;
+      dirLight.shadow.camera.right = MAP_SIZE;
+      dirLight.shadow.camera.top = MAP_SIZE;
+      dirLight.shadow.camera.bottom = -MAP_SIZE;
+      dirLight.shadow.mapSize.width = 1024;
+      dirLight.shadow.mapSize.height = 1024;
+      scene.add(dirLight);
 
-    spawnObstacles();
-    spawnAgents();
+      const floorGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE);
+      const floorMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.receiveShadow = true;
+      scene.add(floor);
 
-    const resizeObserver = new ResizeObserver(() => onResize());
-    resizeObserver.observe(container);
+      spawnObstacles();
+      spawnAgents();
 
-    container.addEventListener('pointerdown', onPointerDown);
-    container.addEventListener('pointermove', onPointerMove);
-    container.addEventListener('pointerup', onPointerUp);
-    container.addEventListener('pointercancel', onPointerUp);
-    container.addEventListener('wheel', onWheel, { passive: false });
+      const resizeObserver = new ResizeObserver(() => onResize());
+      resizeObserver.observe(container);
+
+      container.addEventListener('pointerdown', onPointerDown);
+      container.addEventListener('pointermove', onPointerMove);
+      container.addEventListener('pointerup', onPointerUp);
+      container.addEventListener('pointercancel', onPointerUp);
+      container.addEventListener('wheel', onWheel, { passive: false });
+
+      initialized = true;
+    }
+    catch (error) {
+      console.error('Failed to initialize 3D renderer:', error);
+      showWebGLError();
+    }
   }
 
   function updateCamera() {
@@ -244,7 +258,8 @@ import Layout from '../layouts/Layout.astro';
       { name: 'Prairie Pioneer', type: 'car', modelUrl: '/models/prairie_pioneer.glb', rotation: -Math.PI / 2, scale: 2, hitboxScale: 1.8 },
       { name: 'Project Perry', type: 'car', modelUrl: '/models/project_perry.glb', rotation: -Math.PI / 2, scale: 2, hitboxScale: 1.8 },
       { name: 'Sumo Bot', type: 'car', modelUrl: '/models/sumo_bot.glb', rotation: -Math.PI / 2, scale: 0.5, hitboxScale: 1.0, speedScale: 3 },
-      { name: 'Micromouse', type: 'car', modelUrl: '/models/micromouse.glb', rotation: -Math.PI / 2, scale: 0.3, hitboxScale: 1.0, speedScale: 1.0 }
+      { name: 'Micromouse', type: 'car', modelUrl: '/models/micromouse.glb', rotation: -Math.PI / 2, scale: 0.3, hitboxScale: 1.0, speedScale: 1.0 },
+      { name: 'Prairie Panther', type: 'car', modelUrl: '/models/prairie_panther.glb', rotation: -Math.PI / 2, scale: 1.8, hitboxScale: 1.8 },
     ];
 
     configs.forEach((cfg, i) => {
@@ -339,6 +354,43 @@ import Layout from '../layouts/Layout.astro';
     renderer.render(scene, camera);
   }
 
+  function isWebGLAvailable() {
+    try {
+      const canvas = document.createElement('canvas');
+
+      return !!(
+        window.WebGLRenderingContext &&
+        (
+          canvas.getContext('webgl2') ||
+          canvas.getContext('webgl')
+        )
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function showWebGLError() {
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="w-full h-full flex items-center justify-center p-6">
+        <div class="max-w-md text-center">
+          <h2 class="text-xl font-bold mb-2">
+            3D Graphics Unavailable
+          </h2>
+
+          <p class="text-gray-600">
+            This device or browser does not support the graphics features
+            required to run this simulation.
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
   init();
-  requestAnimationFrame(animate);
+  if (initialized){
+    requestAnimationFrame(animate);
+  }
 </script>
