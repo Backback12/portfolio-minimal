@@ -1,10 +1,22 @@
 ---
 const { title, date, image, id } = Astro.props;
 const modalId = `modal-${id}`;
+
+const openModal = (id: string) => `
+  const dialog = document.getElementById('${id}');
+  dialog.showModal();
+  document.documentElement.classList.add('modal-open');
+`;
+
+const closeModal = (id: string) => `
+  const dialog = document.getElementById('${id}');
+  dialog.close();
+  document.documentElement.classList.remove('modal-open');
+`;
 ---
 
 
-<button onclick={`document.getElementById('${modalId}').showModal()`} class="project-card">
+<button onclick={openModal(modalId)} class="project-card">
   <div class="card-image-container">
     <img src={image} class="w-full h-full object-cover" />
   </div>
@@ -14,9 +26,9 @@ const modalId = `modal-${id}`;
   </div>
 </button>
 
-<dialog id={modalId} class="project-modal">
+<dialog id={modalId} class="project-modal" onclose={`document.documentElement.classList.remove('modal-open')`}>
   <div class="modal-inner">
-    <button onclick={`document.getElementById('${modalId}').close()`} class="modal-close-btn">✕</button>
+    <button onclick={closeModal(modalId)} class="modal-close-btn" aria-label="Close project">✕</button>
     
     <div class="modal-header">
       <div class="card-date text-gray-500">{date}</div>
@@ -31,6 +43,14 @@ const modalId = `modal-${id}`;
 
 <style>
 @reference "../styles/global.css";
+
+:global(html) {
+  scrollbar-gutter: stable;
+}
+
+:global(html.modal-open) {
+  overflow: hidden;
+}
 
 .project-card {
   @apply block w-full border-2 
@@ -59,7 +79,33 @@ const modalId = `modal-${id}`;
 }
 
 .project-modal {
-  @apply backdrop:bg-black/60 backdrop:backdrop-blur-sm p-0 rounded-2xl border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-w-3xl mx-auto top-1/2 -translate-y-1/2 m-0 bg-white outline-none;
+  @apply backdrop:bg-black/60 backdrop:backdrop-blur-sm p-0 rounded-2xl border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-[calc(100%-2rem)] max-w-3xl mx-auto top-1/2 -translate-y-1/2 m-0 bg-white outline-none;
+
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.project-modal[open] {
+  opacity: 1;
+}
+
+.project-modal::backdrop {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.project-modal[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  .project-modal[open] {
+    opacity: 0;
+  }
+
+  .project-modal[open]::backdrop {
+    opacity: 0;
+  }
 }
 
 .modal-inner {
