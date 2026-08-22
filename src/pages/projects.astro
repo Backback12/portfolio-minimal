@@ -80,10 +80,6 @@ const projects = projectsSource.sort((a, b) => {
   .projects-grid {
     @apply grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-5xl mx-auto;
   }
-
-  .project-wrapper {
-    display: contents;
-  }
 </style>
 
 <script>
@@ -97,13 +93,6 @@ const projects = projectsSource.sort((a, b) => {
     select.addEventListener('change', (e) => {
       const sortBy = (e.target as HTMLSelectElement).value;
       const items = Array.from(grid.children) as HTMLElement[];
-
-      document.querySelectorAll<HTMLElement>('.project-details-panel.is-open').forEach((panel) => {
-        const button = document.querySelector<HTMLElement>(`[aria-controls="${panel.id}"]`);
-        panel.classList.remove('is-open');
-        panel.hidden = true;
-        button?.setAttribute('aria-expanded', 'false');
-      });
 
       // if (sortBy === 'default') {
       //   originalOrder.forEach(item => grid.appendChild(item));

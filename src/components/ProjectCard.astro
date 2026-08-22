@@ -1,9 +1,10 @@
 ---
 const { title, date, image, id } = Astro.props;
-const detailsId = `project-details-${id}`;
+const modalId = `modal-${id}`;
 ---
 
-<button type="button" class="project-card" aria-expanded="false" aria-controls={detailsId}>
+
+<button onclick={`document.getElementById('${modalId}').showModal()`} class="project-card">
   <div class="card-image-container">
     <img src={image} class="w-full h-full object-cover" />
   </div>
@@ -13,30 +14,30 @@ const detailsId = `project-details-${id}`;
   </div>
 </button>
 
-<div id={detailsId} class="project-details-panel" hidden>
-  <div class="project-details-frame">
-    <div class="project-details-inner">
-      <div class="project-details-header">
-        <div class="card-date text-gray-500">{date}</div>
-        <h2 class="text-3xl font-black">{title}</h2>
-      </div>
-
-      <div class="prose prose-black max-w-none text-left">
-        <slot />
-      </div>
+<dialog id={modalId} class="project-modal">
+  <div class="modal-inner">
+    <button onclick={`document.getElementById('${modalId}').close()`} class="modal-close-btn">✕</button>
+    
+    <div class="modal-header">
+      <div class="card-date text-gray-500">{date}</div>
+      <h2 class="text-4xl font-black">{title}</h2>
+    </div>
+    
+    <div class="prose prose-black max-w-none text-left">
+      <slot /> 
     </div>
   </div>
-</div>
+</dialog>
 
 <style>
 @reference "../styles/global.css";
 
 .project-card {
-  @apply block w-full border-2
-  border-gray-400 rounded-2xl
-  overflow-hidden
-  hover:-translate-y-1
-  hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
+  @apply block w-full border-2 
+  border-gray-400 rounded-2xl 
+  overflow-hidden 
+  hover:-translate-y-1 
+  hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] 
   transition-all bg-white mb-6 text-left cursor-pointer;
 }
 
@@ -57,104 +58,19 @@ const detailsId = `project-details-${id}`;
   @apply text-xl font-black;
 }
 
-.project-details-panel {
-  @apply col-span-full w-full overflow-hidden mb-6;
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transform: translateY(-0.5rem);
-  transition: grid-template-rows 260ms ease, opacity 220ms ease, transform 260ms ease;
+.project-modal {
+  @apply backdrop:bg-black/60 backdrop:backdrop-blur-sm p-0 rounded-2xl border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-w-3xl mx-auto top-1/2 -translate-y-1/2 m-0 bg-white outline-none;
 }
 
-.project-details-panel.is-open {
-  grid-template-rows: 1fr;
-  opacity: 1;
-  transform: translateY(0);
+.modal-inner {
+  @apply p-8 md:p-12 max-h-[85vh] overflow-y-auto;
 }
 
-.project-details-panel[hidden] {
-  display: none;
+.modal-close-btn {
+  @apply absolute top-4 right-4 w-10 h-10 flex items-center justify-center border-2 border-black rounded-full hover:bg-gray-100 font-bold text-xl cursor-pointer bg-white;
 }
 
-.project-details-frame {
-  @apply min-h-0 overflow-hidden;
-}
-
-.project-details-inner {
-  @apply bg-white rounded-2xl border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-6 md:p-8;
-}
-
-.project-details-header {
-  @apply mb-6 border-b-2 border-black pb-4 text-center;
+.modal-header {
+  @apply mb-8 border-b-2 border-black pb-6 text-center mt-4;
 }
 </style>
-
-<script>
-  const closeProjectDetails = (panel: HTMLElement) => {
-    const button = document.querySelector<HTMLElement>(`[aria-controls="${panel.id}"]`);
-
-    panel.classList.remove('is-open');
-    button?.setAttribute('aria-expanded', 'false');
-
-    window.setTimeout(() => {
-      if (!panel.classList.contains('is-open')) {
-        panel.hidden = true;
-      }
-    }, 260);
-  };
-
-  const placePanelAfterCardRow = (card: HTMLElement, panel: HTMLElement) => {
-    const grid = card.closest('.projects-grid');
-    const cards = grid ? Array.from(grid.querySelectorAll<HTMLElement>('.project-card')) : [card];
-    const cardIndex = cards.indexOf(card);
-    const cardTop = card.offsetTop;
-    let rowEnd: Element = card;
-
-    for (const nextCard of cards.slice(cardIndex + 1)) {
-      if (Math.abs(nextCard.offsetTop - cardTop) > 1) {
-        break;
-      }
-
-      rowEnd = nextCard;
-    }
-
-    rowEnd.after(panel);
-  };
-
-  const openProjectDetails = (card: HTMLElement, panel: HTMLElement) => {
-    document.querySelectorAll<HTMLElement>('.project-details-panel.is-open').forEach((openPanel) => {
-      if (openPanel !== panel) {
-        closeProjectDetails(openPanel);
-      }
-    });
-
-    const button = document.querySelector<HTMLElement>(`[aria-controls="${panel.id}"]`);
-    placePanelAfterCardRow(card, panel);
-    panel.hidden = false;
-    button?.setAttribute('aria-expanded', 'true');
-
-    requestAnimationFrame(() => {
-      panel.classList.add('is-open');
-    });
-  };
-
-  document.addEventListener('click', (event) => {
-    const target = event.target as HTMLElement;
-    const card = target.closest<HTMLElement>('.project-card');
-
-    if (card) {
-      const panelId = card.getAttribute('aria-controls');
-      const panel = panelId ? document.getElementById(panelId) : null;
-
-      if (panel) {
-        panel.classList.contains('is-open') ? closeProjectDetails(panel) : openProjectDetails(card, panel);
-      }
-
-      return;
-    }
-
-    if (!target.closest('.project-details-panel')) {
-      document.querySelectorAll<HTMLElement>('.project-details-panel.is-open').forEach(closeProjectDetails);
-    }
-  });
-</script>
