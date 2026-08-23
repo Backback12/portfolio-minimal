@@ -3,7 +3,7 @@ import '../styles/global.css';
 
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-const { title } = Astro.props;
+const { title, fullWidth = false } = Astro.props;
 ---
 
 <html lang="en">
@@ -31,7 +31,12 @@ const { title } = Astro.props;
   <body class="min-h-screen flex flex-col w-full m-0 text-center">
     <Header />
 
-    <main class="flex-grow w-full py-8 flex flex-col items-center">
+    <main
+      class:list={[
+        'flex-grow w-full flex flex-col items-center',
+        fullWidth ? 'p-0' : 'py-8 px-4 sm:px-6',
+      ]}
+    >
       <div class="w-full">
         <slot />
       </div>

@@ -12,7 +12,8 @@ const { title, date, location, image, description } = Astro.props;
 
 <div class="gallery-card">
   <div class="image-container">
-    <img src={image} alt={title} loading="lazy" />
+    <!-- <img src={image} alt={title} loading="lazy" /> -->
+    <img src={image} class="w-full h-full object-cover" loading="lazy" />
   </div>
   <div class="card-content">
     <!-- <div class="meta-row">

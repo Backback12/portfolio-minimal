@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Playground">
+<Layout title="Playground" fullWidth={true}>
   <!-- <div class="mb-12 text-center border-b-4 border-black pb-6 max-w-2xl mx-auto mt-10">
     <h1 class="text-4xl font-black mb-4 uppercase tracking-tight">Playground</h1>
     <p class="text-gray-700 font-bold">Simulation Environment</p>
@@ -13,9 +13,13 @@ import Layout from '../layouts/Layout.astro';
     class="w-[80vw] h-[600px] max-w-5xl mx-auto cursor-crosshair overflow-hidden relative"
   >
   </div> -->
+  <!-- <div
+    id="canvas-container"
+    class="w-full max-w-5xl h-[700px] mx-auto p-0 overflow-hidden relative cursor-grab active:cursor-grabbing touch-none">
+  </div> -->
   <div
     id="canvas-container"
-    class="w-full max-w-5xl h-[600px] mx-auto p-0 overflow-hidden relative cursor-grab active:cursor-grabbing touch-none">
+    class="w-full max-w-[1200px] aspect-[4/3] mx-auto p-0 overflow-hidden relative cursor-grab active:cursor-grabbing touch-none">
   </div>
 </Layout>
 
@@ -51,9 +55,11 @@ import Layout from '../layouts/Layout.astro';
   const MIN_DISTANCE = 8;
   const MAX_DISTANCE = 45;
 
+  const FRUSTUM_SIZE = 30;
+
   // Prevent viewing from underneath or completely flat with the floor
   const MIN_ELEVATION = THREE.MathUtils.degToRad(12);
-  const MAX_ELEVATION = THREE.MathUtils.degToRad(80);
+  const MAX_ELEVATION = THREE.MathUtils.degToRad(60);
 
   let previousPinchDistance = null;
 
@@ -72,7 +78,7 @@ import Layout from '../layouts/Layout.astro';
       const width = container.clientWidth;
       const height = container.clientHeight;
       const aspect = width / height;
-      const frustumSize = 20;
+      const frustumSize = FRUSTUM_SIZE;
 
       camera = new THREE.OrthographicCamera(
         (frustumSize * aspect) / -2, (frustumSize * aspect) / 2,
@@ -316,7 +322,7 @@ import Layout from '../layouts/Layout.astro';
     const width = container.clientWidth;
     const height = container.clientHeight;
     const aspect = width / height;
-    const frustumSize = 20;
+    const frustumSize = FRUSTUM_SIZE;
 
     camera.left = (frustumSize * aspect) / -2;
     camera.right = (frustumSize * aspect) / 2;
