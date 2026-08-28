@@ -6,7 +6,7 @@ import { getCollection, render } from 'astro:content';
 
 const allProjects = await getCollection('projects');
 
-const featuredProjectIds = ['micromouse', 'balance-bot', 'sumo-bot'];
+const featuredProjectIds = ['micromouse/micromouse', 'balance-bot/balance-bot', 'sumo-bot/sumo-bot'];
 
 const featuredProjects = allProjects.filter(project => 
   featuredProjectIds.includes(project.id)
