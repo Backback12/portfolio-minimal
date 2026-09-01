@@ -10,6 +10,7 @@ export class Agent {
     this.type = type;
     this.scene = scene;
     this.bounds = bounds;
+    this.baseScale = scale;
     
     this.hitboxRadius = 1.0 * hitboxScale;
     

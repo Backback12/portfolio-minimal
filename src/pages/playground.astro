@@ -3,400 +3,1046 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout title="Playground" fullWidth={true}>
-  <!-- <div class="mb-12 text-center border-b-4 border-black pb-6 max-w-2xl mx-auto mt-10">
-    <h1 class="text-4xl font-black mb-4 uppercase tracking-tight">Playground</h1>
-    <p class="text-gray-700 font-bold">Simulation Environment</p>
-  </div> -->
-  
-  <!-- <div 
-    id="canvas-container" 
-    class="w-[80vw] h-[600px] max-w-5xl mx-auto cursor-crosshair overflow-hidden relative"
-  >
-  </div> -->
-  <!-- <div
-    id="canvas-container"
-    class="w-full max-w-5xl h-[700px] mx-auto p-0 overflow-hidden relative cursor-grab active:cursor-grabbing touch-none">
-  </div> -->
   <div
     id="canvas-container"
-    class="w-full max-w-[1200px] aspect-[4/3] mx-auto p-0 overflow-hidden relative cursor-grab active:cursor-grabbing touch-none">
+    class="w-full max-w-[1200px] aspect-[5/3] mx-auto p-0 overflow-hidden relative cursor-grab active:cursor-grabbing touch-none">
   </div>
 </Layout>
 
 <script>
-  import * as THREE from 'three';
-  import { Agent } from '../utils/agent.js';
+import * as THREE from 'three';
+import { Agent } from '../utils/agent.js';
 
-  let container, scene, camera, renderer;
-  let agents = [];
-  let obstacles = [];
-  
-  const MAP_SIZE = 24; 
-  const bounds = { xMin: -MAP_SIZE/2, xMax: MAP_SIZE/2, zMin: -MAP_SIZE/2, zMax: MAP_SIZE/2 };
+let container, scene, camera, renderer;
+let agents = [];
+let obstacles = [];
 
-  const raycaster = new THREE.Raycaster();
-  const mouse = new THREE.Vector2();
-  let activeHoveredAgent = null;
+const MAP_SIZE = 24;
+const bounds = {
+  xMin: -MAP_SIZE / 2,
+  xMax: MAP_SIZE / 2,
+  zMin: -MAP_SIZE / 2,
+  zMax: MAP_SIZE / 2
+};
 
-  const target = new THREE.Vector3(0, 0, 0);
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
 
-  let isDragging = false;
-  let previousPointer = { x: 0, y: 0 };
+const target = new THREE.Vector3(0, 0, 0);
 
-  let azimuth = Math.atan2(20, 20);
-  let elevation = Math.atan2(15, Math.sqrt(20 * 20 + 20 * 20));
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let previousPointer = { x: 0, y: 0 };
+const DRAG_THRESHOLD = 6;
 
-  let targetAzimuth = azimuth;
-  let targetElevation = elevation;
+const activePointers = new Map();
+// let previousPinchDistance = null;
 
-  let cameraDistance = Math.sqrt(20 * 20 + 15 * 15 + 20 * 20);
-  let targetDistance = cameraDistance;
+let azimuth = Math.atan2(20, 20);
+let elevation = Math.atan2(
+  15,
+  Math.sqrt(20 * 20 + 20 * 20)
+);
 
-  const MIN_DISTANCE = 8;
-  const MAX_DISTANCE = 45;
+let targetAzimuth = azimuth;
+let targetElevation = elevation;
 
-  const FRUSTUM_SIZE = 30;
+let cameraDistance = Math.sqrt(
+  50 * 50 + 55 * 55 + 50 * 50
+);
 
-  // Prevent viewing from underneath or completely flat with the floor
-  const MIN_ELEVATION = THREE.MathUtils.degToRad(12);
-  const MAX_ELEVATION = THREE.MathUtils.degToRad(60);
+let targetDistance = cameraDistance;
 
-  let previousPinchDistance = null;
+const MIN_DISTANCE = 8;
+const MAX_DISTANCE = 45;
 
-  let initialized = false;
+const FRUSTUM_SIZE = 30;
 
-  function init() {
-    container = document.getElementById('canvas-container');
-    if (!isWebGLAvailable()) {
-      showWebGLError();
-      return;
-    }
+// Prevent viewing from underneath or completely flat with the floor
+const MIN_ELEVATION = THREE.MathUtils.degToRad(12);
+const MAX_ELEVATION = THREE.MathUtils.degToRad(60);
 
-    try {
-      scene = new THREE.Scene();
+let previousPinchDistance = null;
+
+let initialized = false;
+
+/* -------------------------------------------------------------------------- */
+/*                               AGENT HIGHLIGHT                              */
+/* -------------------------------------------------------------------------- */
+
+let highlightedAgent = null;
+let highlightState = null;
+
+const HIGHLIGHT_POSITION = new THREE.Vector3();
+const HIGHLIGHT_ROTATION_SPEED = 0.8;
+const HIGHLIGHT_TARGET_SCALE = 3.8;
+const HIGHLIGHT_MESH_SCALE_MULTIPLIER = 0.4;
+
+let overlay;
+let titleElement;
+
+/* -------------------------------------------------------------------------- */
+/*                                   INIT                                     */
+/* -------------------------------------------------------------------------- */
+
+function init() {
+  container = document.getElementById('canvas-container');
+
+  if (!isWebGLAvailable()) {
+    showWebGLError();
+    return;
+  }
+
+  try {
+    scene = new THREE.Scene();
 
       const width = container.clientWidth;
       const height = container.clientHeight;
       const aspect = width / height;
       const frustumSize = FRUSTUM_SIZE;
 
-      camera = new THREE.OrthographicCamera(
-        (frustumSize * aspect) / -2, (frustumSize * aspect) / 2,
-        frustumSize / 2, frustumSize / -2,
-        1, 1000
-      );
-      // camera.position.set(20, 15, 20);
-      // camera.lookAt(0, 0, 0);
-      updateCamera();
-
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(width, height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      container.appendChild(renderer.domElement);
-
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-      scene.add(ambientLight);
-
-      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-      dirLight.position.set(15, 30, 10);
-      dirLight.castShadow = true;
-      
-      dirLight.shadow.camera.left = -MAP_SIZE;
-      dirLight.shadow.camera.right = MAP_SIZE;
-      dirLight.shadow.camera.top = MAP_SIZE;
-      dirLight.shadow.camera.bottom = -MAP_SIZE;
-      dirLight.shadow.mapSize.width = 1024;
-      dirLight.shadow.mapSize.height = 1024;
-      scene.add(dirLight);
-
-      const floorGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE);
-      const floorMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-      const floor = new THREE.Mesh(floorGeo, floorMat);
-      floor.rotation.x = -Math.PI / 2;
-      floor.receiveShadow = true;
-      scene.add(floor);
-
-      spawnObstacles();
-      spawnAgents();
-
-      const resizeObserver = new ResizeObserver(() => onResize());
-      resizeObserver.observe(container);
-
-      container.addEventListener('pointerdown', onPointerDown);
-      container.addEventListener('pointermove', onPointerMove);
-      container.addEventListener('pointerup', onPointerUp);
-      container.addEventListener('pointercancel', onPointerUp);
-      container.addEventListener('wheel', onWheel, { passive: false });
-
-      initialized = true;
-    }
-    catch (error) {
-      console.error('Failed to initialize 3D renderer:', error);
-      showWebGLError();
-    }
-  }
-
-  function updateCamera() {
-    camera.position.set(
-      target.x + cameraDistance * Math.cos(elevation) * Math.sin(azimuth),
-      target.y + cameraDistance * Math.sin(elevation),
-      target.z + cameraDistance * Math.cos(elevation) * Math.cos(azimuth)
+    camera = new THREE.OrthographicCamera(
+      (frustumSize * aspect) / -2,
+      (frustumSize * aspect) / 2,
+      frustumSize / 2,
+      frustumSize / -2,
+      1,
+      1000
     );
 
-    camera.lookAt(target);
-  }
+    updateCamera();
 
-  const activePointers = new Map();
-
-  function onPointerDown(event) {
-    activePointers.set(event.pointerId, {
-      x: event.clientX,
-      y: event.clientY
+    renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true
     });
 
-    if (activePointers.size === 1) {
-      isDragging = true;
-      previousPointer.x = event.clientX;
-      previousPointer.y = event.clientY;
-    }
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, 1.5)
+    );
 
-    container.setPointerCapture(event.pointerId);
-  }
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  function onPointerMove(event) {
-    if (!activePointers.has(event.pointerId)) return;
+    container.appendChild(renderer.domElement);
 
-    activePointers.set(event.pointerId, {
-      x: event.clientX,
-      y: event.clientY
+    createHighlightUI();
+
+    const ambientLight = new THREE.AmbientLight(
+      0xffffff,
+      0.7
+    );
+
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(
+      0xffffff,
+      1.2
+    );
+
+    dirLight.position.set(15, 30, 10);
+    dirLight.castShadow = true;
+
+    dirLight.shadow.camera.left = -MAP_SIZE;
+    dirLight.shadow.camera.right = MAP_SIZE;
+    dirLight.shadow.camera.top = MAP_SIZE;
+    dirLight.shadow.camera.bottom = -MAP_SIZE;
+
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+
+    scene.add(dirLight);
+
+    /* -------------------------------------------------------------------------- */
+    /*                                PLATFORM                                    */
+    /* -------------------------------------------------------------------------- */
+
+    // Overall platform dimensions
+    const PLATFORM_SIZE = MAP_SIZE;
+    const PLATFORM_HEIGHT = 0.6;
+
+    // Platform appearance
+    const PLATFORM_COLOR = 0xffffff;
+
+    const platformGeo = new THREE.BoxGeometry(
+      PLATFORM_SIZE,
+      PLATFORM_HEIGHT,
+      PLATFORM_SIZE
+    );
+
+    const platformMat =
+      new THREE.MeshLambertMaterial({
+        color: PLATFORM_COLOR
+      });
+
+    const platform = new THREE.Mesh(
+      platformGeo,
+      platformMat
+    );
+
+    // Top of the platform remains at Y = 0
+    platform.position.y =
+      -PLATFORM_HEIGHT / 2;
+
+    platform.receiveShadow = true;
+
+    scene.add(platform);
+
+
+    /* -------------------------------------------------------------------------- */
+    /*                                GRIDLINES                                   */
+    /* -------------------------------------------------------------------------- */
+
+    // Number of grid divisions
+    const GRID_DIVISIONS = 24;
+
+    // Grid width and height
+    const GRID_SIZE = MAP_SIZE;
+
+    // Main gridline color
+    const GRID_COLOR_CENTER = 0x9ca3af;
+
+    // Normal gridline color
+    const GRID_COLOR = 0xd1d5db;
+
+    // Thickness is controlled by the renderer line implementation.
+    // Standard WebGL lines are generally limited to 1px.
+    const GRID_THICKNESS = 1;
+
+    // Slightly above the platform to prevent z-fighting
+    const GRID_Y_OFFSET = 0.002;
+
+    const grid = new THREE.GridHelper(
+      GRID_SIZE,
+      GRID_DIVISIONS,
+      GRID_COLOR_CENTER,
+      GRID_COLOR
+    );
+
+    grid.position.y = GRID_Y_OFFSET;
+    grid.receiveShadow = true;
+    // scene.add(grid);
+
+    spawnObstacles();
+    spawnAgents();
+
+    const resizeObserver = new ResizeObserver(() => {
+      onResize();
     });
 
-    const pointers = [...activePointers.values()];
+    resizeObserver.observe(container);
 
-    // Pinch zoom
-    if (pointers.length === 2) {
-      const dx = pointers[0].x - pointers[1].x;
-      const dy = pointers[0].y - pointers[1].y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+    container.addEventListener(
+      'pointerdown',
+      onPointerDown
+    );
 
-      if (previousPinchDistance !== null) {
-        const delta = previousPinchDistance - distance;
+    container.addEventListener(
+      'pointermove',
+      onPointerMove
+    );
 
-        targetDistance += delta * 0.05;
-        targetDistance = THREE.MathUtils.clamp(
+    container.addEventListener(
+      'pointerup',
+      onPointerUp
+    );
+
+    container.addEventListener(
+      'pointercancel',
+      onPointerUp
+    );
+
+    container.addEventListener(
+      'wheel',
+      onWheel,
+      { passive: false }
+    );
+
+    initialized = true;
+
+  } catch (error) {
+    console.error(
+      'Failed to initialize 3D renderer:',
+      error
+    );
+
+    showWebGLError();
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               HIGHLIGHT UI                                 */
+/* -------------------------------------------------------------------------- */
+
+function createHighlightUI() {
+  overlay = document.createElement('div');
+
+  overlay.className = `
+    absolute inset-0
+    bg-black/30
+    opacity-0
+    pointer-events-none
+    transition-opacity
+    duration-300
+  `;
+
+  // container.appendChild(overlay);
+
+  titleElement = document.createElement('div');
+
+  titleElement.className = `
+    absolute
+    bottom-6
+    left-1/2
+    -translate-x-1/2
+    text-2xl
+    font-bold
+    text-black
+    opacity-0
+    pointer-events-none
+    transition-opacity
+    duration-300
+    whitespace-nowrap
+  `;
+
+  container.appendChild(titleElement);
+}
+
+function showHighlightUI(agent) {
+  titleElement.textContent = agent.name;
+
+  requestAnimationFrame(() => {
+    overlay.classList.remove('opacity-0');
+    titleElement.classList.remove('opacity-0');
+  });
+}
+
+function hideHighlightUI() {
+  overlay.classList.add('opacity-0');
+  titleElement.classList.add('opacity-0');
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                  CAMERA                                    */
+/* -------------------------------------------------------------------------- */
+
+function updateCamera() {
+  camera.position.set(
+    target.x +
+      cameraDistance *
+      Math.cos(elevation) *
+      Math.sin(azimuth),
+
+    target.y +
+      cameraDistance *
+      Math.sin(elevation),
+
+    target.z +
+      cameraDistance *
+      Math.cos(elevation) *
+      Math.cos(azimuth)
+  );
+
+  camera.lookAt(target);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              POINTER CONTROLS                              */
+/* -------------------------------------------------------------------------- */
+
+function onPointerDown(event) {
+  activePointers.set(event.pointerId, {
+    x: event.clientX,
+    y: event.clientY
+  });
+
+  if (activePointers.size === 1) {
+    isDragging = false;
+
+    dragStart.x = event.clientX;
+    dragStart.y = event.clientY;
+
+    previousPointer.x = event.clientX;
+    previousPointer.y = event.clientY;
+  }
+
+  container.setPointerCapture(event.pointerId);
+}
+
+function onPointerMove(event) {
+  if (!activePointers.has(event.pointerId)) return;
+
+  activePointers.set(event.pointerId, {
+    x: event.clientX,
+    y: event.clientY
+  });
+
+  const pointers = [...activePointers.values()];
+
+  if (pointers.length === 2) {
+    const dx = pointers[0].x - pointers[1].x;
+    const dy = pointers[0].y - pointers[1].y;
+
+    const distance = Math.sqrt(
+      dx * dx + dy * dy
+    );
+
+    if (previousPinchDistance !== null) {
+      const delta =
+        previousPinchDistance - distance;
+
+      targetDistance += delta * 0.05;
+
+      targetDistance =
+        THREE.MathUtils.clamp(
           targetDistance,
           MIN_DISTANCE,
           MAX_DISTANCE
         );
-      }
-
-      previousPinchDistance = distance;
-      return;
     }
 
-    previousPinchDistance = null;
+    previousPinchDistance = distance;
 
-    if (!isDragging) return;
+    return;
+  }
 
-    const deltaX = event.clientX - previousPointer.x;
-    const deltaY = event.clientY - previousPointer.y;
+  previousPinchDistance = null;
 
-    previousPointer.x = event.clientX;
-    previousPointer.y = event.clientY;
+  const totalDragX =
+    event.clientX - dragStart.x;
 
-    targetAzimuth -= deltaX * 0.01;
+  const totalDragY =
+    event.clientY - dragStart.y;
 
-    targetElevation += deltaY * 0.01;
-    targetElevation = THREE.MathUtils.clamp(
+  if (
+    Math.abs(totalDragX) > DRAG_THRESHOLD ||
+    Math.abs(totalDragY) > DRAG_THRESHOLD
+  ) {
+    isDragging = true;
+  }
+
+  if (!isDragging) return;
+
+  const deltaX =
+    event.clientX - previousPointer.x;
+
+  const deltaY =
+    event.clientY - previousPointer.y;
+
+  previousPointer.x = event.clientX;
+  previousPointer.y = event.clientY;
+
+  if (highlightedAgent) return;
+
+  targetAzimuth -= deltaX * 0.01;
+
+  targetElevation += deltaY * 0.01;
+
+  targetElevation =
+    THREE.MathUtils.clamp(
       targetElevation,
       MIN_ELEVATION,
       MAX_ELEVATION
     );
+}
+
+function onPointerUp(event) {
+  const wasClick =
+    !isDragging &&
+    activePointers.size === 1;
+
+  if (wasClick) {
+    handleAgentClick(event);
   }
 
-  function onPointerUp(event) {
-    activePointers.delete(event.pointerId);
+  activePointers.delete(event.pointerId);
 
-    isDragging = activePointers.size === 1;
-    previousPinchDistance = null;
+  previousPinchDistance = null;
 
-    if (container.hasPointerCapture(event.pointerId)) {
-      container.releasePointerCapture(event.pointerId);
-    }
+  if (
+    container.hasPointerCapture(
+      event.pointerId
+    )
+  ) {
+    container.releasePointerCapture(
+      event.pointerId
+    );
   }
 
-  function onWheel(event) {
+  isDragging = false;
+}
+
+function onWheel(event) {
   event.preventDefault();
+
+  if (highlightedAgent) return;
 
   targetDistance += event.deltaY * 0.02;
 
-  targetDistance = THREE.MathUtils.clamp(
-    targetDistance,
-    MIN_DISTANCE,
-    MAX_DISTANCE
+  targetDistance =
+    THREE.MathUtils.clamp(
+      targetDistance,
+      MIN_DISTANCE,
+      MAX_DISTANCE
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              CLICK RAYCASTING                              */
+/* -------------------------------------------------------------------------- */
+
+function handleAgentClick(event) {
+  if (highlightedAgent) {
+    unhighlightAgent();
+    return;
+  }
+
+  const rect =
+    renderer.domElement.getBoundingClientRect();
+
+  pointer.x =
+    ((event.clientX - rect.left) / rect.width) *
+      2 -
+    1;
+
+  pointer.y =
+    -(
+      ((event.clientY - rect.top) /
+        rect.height) *
+        2 -
+      1
+    );
+
+  raycaster.setFromCamera(
+    pointer,
+    camera
+  );
+
+  const agentMeshes = agents
+    .filter(agent => agent.mesh)
+    .map(agent => agent.mesh);
+
+  const CLICK_RADIUS = 0.025;
+
+  const offsets = [
+    [0, 0],
+    [-CLICK_RADIUS, 0],
+    [CLICK_RADIUS, 0],
+    [0, -CLICK_RADIUS],
+    [0, CLICK_RADIUS],
+  ];
+
+  let intersections = [];
+
+  for (const [offsetX, offsetY] of offsets) {
+    raycaster.setFromCamera(
+      new THREE.Vector2(
+        pointer.x + offsetX,
+        pointer.y + offsetY
+      ),
+      camera
+    );
+
+    intersections.push(
+      ...raycaster.intersectObjects(
+        agentMeshes,
+        true
+      )
+    );
+  }
+
+  intersections.sort(
+    (a, b) => a.distance - b.distance
+  );
+
+  if (intersections.length === 0) return;
+
+  const clickedAgent =
+    findAgentFromIntersection(
+      intersections[0].object
+    );
+
+  if (!clickedAgent) return;
+
+  highlightAgent(clickedAgent);
+}
+
+function findAgentFromIntersection(object) {
+  let current = object;
+
+  while (current) {
+    const agent = agents.find(
+      candidate =>
+        candidate.mesh === current
+    );
+
+    if (agent) return agent;
+
+    current = current.parent;
+  }
+
+  return null;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              AGENT HIGHLIGHT                               */
+/* -------------------------------------------------------------------------- */
+
+function highlightAgent(agent) {
+  if (
+    highlightedAgent ||
+    !agent.mesh
+  ) {
+    return;
+  }
+
+  highlightedAgent = agent;
+
+  highlightState = {
+    position: agent.mesh.position.clone(),
+    rotation: agent.mesh.rotation.clone(),
+    scale: agent.mesh.scale.clone(),
+    targetPosition: new THREE.Vector3(),
+    targetScale: new THREE.Vector3(),
+    progress: 0,
+    targetProgress: 1
+  };
+
+  const distanceFromCamera = 16;
+
+  const cameraDirection =
+    new THREE.Vector3()
+      .subVectors(
+        target,
+        camera.position
+      )
+      .normalize();
+
+  HIGHLIGHT_POSITION
+    .copy(camera.position)
+    .addScaledVector(
+      cameraDirection,
+      distanceFromCamera
+    );
+
+  HIGHLIGHT_POSITION.y = Math.max(
+    HIGHLIGHT_POSITION.y,
+    1
+  );
+
+  highlightState.targetPosition.copy(
+    HIGHLIGHT_POSITION
+  );
+
+  const baseScale = highlightedAgent.baseScale;
+
+  const scaleCompensation =
+    baseScale +
+    (1 - baseScale) *
+      HIGHLIGHT_MESH_SCALE_MULTIPLIER;
+
+  const finalHighlightScale =
+    HIGHLIGHT_TARGET_SCALE /
+    scaleCompensation;
+
+  highlightState.targetScale.setScalar(
+    finalHighlightScale
+  );
+
+  showHighlightUI(agent);
+}
+
+function unhighlightAgent() {
+  if (
+    !highlightedAgent ||
+    !highlightState
+  ) {
+    return;
+  }
+
+  highlightState.targetProgress = 0;
+
+  hideHighlightUI();
+}
+
+function updateHighlightedAgent(deltaTime) {
+  if (
+    !highlightedAgent ||
+    !highlightState
+  ) {
+    return;
+  }
+
+  highlightState.progress =
+    THREE.MathUtils.damp(
+      highlightState.progress,
+      highlightState.targetProgress,
+      5,
+      deltaTime
+    );
+
+  const progress =
+    THREE.MathUtils.smootherstep(
+      highlightState.progress,
+      0,
+      1
+    );
+
+  highlightedAgent.mesh.position.lerpVectors(
+    highlightState.position,
+    highlightState.targetPosition,
+    progress
+  );
+
+  highlightedAgent.mesh.scale.lerpVectors(
+    highlightState.scale,
+    highlightState.targetScale,
+    progress
+  );
+
+  if (highlightState.targetProgress === 1) {
+    // Rotate while highlighted
+    highlightedAgent.mesh.rotation.y +=
+      HIGHLIGHT_ROTATION_SPEED *
+      deltaTime;
+  } else {
+    // Smoothly return to the exact original rotation
+    highlightedAgent.mesh.rotation.x =
+      THREE.MathUtils.lerp(
+        highlightedAgent.mesh.rotation.x,
+        highlightState.rotation.x,
+        0.12
+      );
+
+    highlightedAgent.mesh.rotation.y =
+      THREE.MathUtils.lerp(
+        highlightedAgent.mesh.rotation.y,
+        highlightState.rotation.y,
+        0.12
+      );
+
+    highlightedAgent.mesh.rotation.z =
+      THREE.MathUtils.lerp(
+        highlightedAgent.mesh.rotation.z,
+        highlightState.rotation.z,
+        0.12
+      );
+  }
+
+  if (
+    highlightState.targetProgress === 0 &&
+    highlightState.progress < 0.002
+  ) {
+    highlightedAgent.mesh.position.copy(
+      highlightState.position
+    );
+
+    highlightedAgent.mesh.rotation.copy(
+      highlightState.rotation
+    );
+
+    highlightedAgent.mesh.scale.copy(
+      highlightState.scale
+    );
+
+    highlightedAgent = null;
+    highlightState = null;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              SCENE CONTENT                                 */
+/* -------------------------------------------------------------------------- */
+
+function spawnObstacles() {
+  const obstacleConfigs = [
+    // {
+    //   x: -4,
+    //   z: -3,
+    //   radius: 1.2,
+    //   height: 3,
+    //   color: 0x94a3b8
+    // }
+  ];
+
+  obstacleConfigs.forEach((cfg) => {
+    const geo =
+      new THREE.CylinderGeometry(
+        cfg.radius,
+        cfg.radius,
+        cfg.height,
+        16
+      );
+
+    const mat =
+      new THREE.MeshLambertMaterial({
+        color: cfg.color
+      });
+
+    const mesh = new THREE.Mesh(
+      geo,
+      mat
+    );
+
+    mesh.position.set(
+      cfg.x,
+      cfg.height / 2,
+      cfg.z
+    );
+
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    scene.add(mesh);
+
+    obstacles.push({
+      mesh,
+      position: mesh.position,
+      radius: cfg.radius
+    });
+  });
+}
+
+function spawnAgents() {
+  const configs = [
+    {
+      name: 'Maze Bot',
+      type: 'car',
+      modelUrl: '/models/maze_bot.glb',
+      rotation: -Math.PI / 2,
+      scale: 0.5,
+      hitboxScale: 1.0
+    },
+    {
+      name: 'Prairie Pioneer',
+      type: 'car',
+      modelUrl: '/models/prairie_pioneer.glb',
+      rotation: -Math.PI / 2,
+      scale: 2,
+      hitboxScale: 1.8
+    },
+    {
+      name: 'Project Perry',
+      type: 'car',
+      modelUrl: '/models/project_perry.glb',
+      rotation: -Math.PI / 2,
+      scale: 2,
+      hitboxScale: 2.0
+    },
+    {
+      name: 'Sumo Bot',
+      type: 'car',
+      modelUrl: '/models/sumo_bot.glb',
+      rotation: -Math.PI / 2,
+      scale: 0.5,
+      hitboxScale: 1.0,
+      speedScale: 3
+    },
+    {
+      name: 'Micromouse',
+      type: 'car',
+      modelUrl: '/models/micromouse.glb',
+      rotation: -Math.PI / 2,
+      scale: 0.3,
+      hitboxScale: 1.0,
+      speedScale: 1.5
+    },
+    {
+      name: 'Prairie Panther',
+      type: 'car',
+      modelUrl: '/models/prairie_panther.glb',
+      rotation: -Math.PI / 2,
+      scale: 1.8,
+      hitboxScale: 2.0
+    }
+  ];
+
+  configs.forEach((cfg, i) => {
+    const randomStartPos =
+      new THREE.Vector3(
+        THREE.MathUtils.randFloat(
+          bounds.xMin + 3,
+          bounds.xMax - 3
+        ),
+        0,
+        THREE.MathUtils.randFloat(
+          bounds.zMin + 3,
+          bounds.zMax - 3
+        )
+      );
+
+    const agent = new Agent(
+      i,
+      cfg.name,
+      cfg.type,
+      scene,
+      bounds,
+      randomStartPos,
+      cfg.modelUrl,
+      cfg.scale,
+      cfg.rotation,
+      cfg.hitboxScale,
+      cfg.speedScale
+    );
+
+    agents.push(agent);
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                  RESIZE                                    */
+/* -------------------------------------------------------------------------- */
+
+function onResize() {
+  if (!container || !camera || !renderer) {
+    return;
+  }
+
+  const width =
+    container.clientWidth;
+
+  const height =
+    container.clientHeight;
+
+  const aspect =
+    width / height;
+
+  const frustumSize = FRUSTUM_SIZE;
+
+  camera.left =
+    (frustumSize * aspect) / -2;
+
+  camera.right =
+    (frustumSize * aspect) / 2;
+
+  camera.top =
+    frustumSize / 2;
+
+  camera.bottom =
+    frustumSize / -2;
+
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(
+    width,
+    height
   );
 }
 
-  function spawnObstacles() {
-    const obstacleConfigs = [
-      // { x: -4, z: -3, radius: 1.2, height: 3, color: 0x94a3b8 },
-      // { x: 5, z: 6, radius: 1.5, height: 2, color: 0x94a3b8 }
-    ];
+/* -------------------------------------------------------------------------- */
+/*                                 ANIMATION                                  */
+/* -------------------------------------------------------------------------- */
 
-    obstacleConfigs.forEach((cfg) => {
-      const geo = new THREE.CylinderGeometry(cfg.radius, cfg.radius, cfg.height, 16);
-      const mat = new THREE.MeshLambertMaterial({ color: cfg.color });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(cfg.x, cfg.height / 2, cfg.z);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      scene.add(mesh);
+let previousTime = 0;
 
-      obstacles.push({ mesh: mesh, position: mesh.position, radius: cfg.radius });
-    });
-  }
+function animate(time) {
+  requestAnimationFrame(animate);
 
-  function spawnAgents() {
-    const configs = [
-      { name: 'Maze Bot', type: 'car', modelUrl: '/models/maze_bot.glb', rotation: -Math.PI / 2, scale: 0.5, hitboxScale: 1.0 },
-      { name: 'Prairie Pioneer', type: 'car', modelUrl: '/models/prairie_pioneer.glb', rotation: -Math.PI / 2, scale: 2, hitboxScale: 1.8 },
-      { name: 'Project Perry', type: 'car', modelUrl: '/models/project_perry.glb', rotation: -Math.PI / 2, scale: 2, hitboxScale: 1.8 },
-      { name: 'Sumo Bot', type: 'car', modelUrl: '/models/sumo_bot.glb', rotation: -Math.PI / 2, scale: 0.5, hitboxScale: 1.0, speedScale: 3 },
-      { name: 'Micromouse', type: 'car', modelUrl: '/models/micromouse.glb', rotation: -Math.PI / 2, scale: 0.3, hitboxScale: 1.0, speedScale: 1.0 },
-      { name: 'Prairie Panther', type: 'car', modelUrl: '/models/prairie_panther.glb', rotation: -Math.PI / 2, scale: 1.8, hitboxScale: 1.8 },
-    ];
+  const timestampSeconds =
+    time * 0.001;
 
-    configs.forEach((cfg, i) => {
-      const randomStartPos = new THREE.Vector3(
-        THREE.MathUtils.randFloat(bounds.xMin + 3, bounds.xMax - 3),
-        0, 
-        THREE.MathUtils.randFloat(bounds.zMin + 3, bounds.zMax - 3)
+  const deltaTime = Math.min(
+    (time - previousTime) * 0.001,
+    0.1
+  );
+
+  previousTime = time;
+
+  agents.forEach(agent => {
+    // The highlighted agent is deliberately excluded from physics updates.
+    if (
+      agent === highlightedAgent
+    ) {
+      return;
+    }
+
+    if (agent.update) {
+      agent.update(
+        obstacles,
+        agents,
+        deltaTime
       );
-
-      const agent = new Agent(i, cfg.name, cfg.type, scene, bounds, randomStartPos, cfg.modelUrl, cfg.scale, cfg.rotation, cfg.hitboxScale, cfg.speedScale);
-      agents.push(agent);
-    });
-  }
-
-  function onMouseMove(event) {
-    const rect = container.getBoundingClientRect();
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-  }
-
-  function handleInteractions() {
-    raycaster.setFromCamera(mouse, camera);
-    
-    const agentMeshes = agents.map(a => a.mesh);
-    const intersects = raycaster.intersectObjects(agentMeshes, true);
-
-    if (intersects.length > 0) {
-      let rootMesh = intersects[0].object;
-      while (rootMesh.parent && rootMesh.parent !== scene) {
-        rootMesh = rootMesh.parent;
-      }
-
-      const matchedAgent = agents.find(a => a.mesh === rootMesh);
-      
-      if (activeHoveredAgent && activeHoveredAgent !== matchedAgent) {
-        activeHoveredAgent.setHoverState(false);
-      }
-
-      if (matchedAgent) {
-        activeHoveredAgent = matchedAgent;
-        matchedAgent.setHoverState(true);
-        return;
-      }
     }
+  });
 
-    if (activeHoveredAgent) {
-      activeHoveredAgent.setHoverState(false);
-      activeHoveredAgent = null;
-    }
-  }
+  updateHighlightedAgent(
+    deltaTime
+  );
 
-  function onResize() {
-    if (!container) return;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    const aspect = width / height;
-    const frustumSize = FRUSTUM_SIZE;
+  azimuth =
+    THREE.MathUtils.lerp(
+      azimuth,
+      targetAzimuth,
+      0.12
+    );
 
-    camera.left = (frustumSize * aspect) / -2;
-    camera.right = (frustumSize * aspect) / 2;
-    camera.top = frustumSize / 2;
-    camera.bottom = frustumSize / -2;
-    
-    camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
-  }
-
-  function animate(time) {
-    requestAnimationFrame(animate);
-    const timestampSeconds = time * 0.001;
-
-    agents.forEach(agent => {
-      // Pass the agents array alongside obstacles
-      if(agent.update) agent.update(obstacles, agents, timestampSeconds);
-    });
-
-    handleInteractions();
-    azimuth = THREE.MathUtils.lerp(azimuth, targetAzimuth, 0.12);
-    elevation = THREE.MathUtils.lerp(
+  elevation =
+    THREE.MathUtils.lerp(
       elevation,
       targetElevation,
       0.12
     );
 
-    cameraDistance = THREE.MathUtils.lerp(
+  cameraDistance =
+    THREE.MathUtils.lerp(
       cameraDistance,
       targetDistance,
       0.12
     );
 
-    updateCamera();
-    renderer.render(scene, camera);
+  updateCamera();
+
+  renderer.render(
+    scene,
+    camera
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                WEBGL CHECK                                 */
+/* -------------------------------------------------------------------------- */
+
+function isWebGLAvailable() {
+  try {
+    const canvas =
+      document.createElement('canvas');
+
+    return !!(
+      window.WebGLRenderingContext &&
+      (
+        canvas.getContext('webgl2') ||
+        canvas.getContext('webgl')
+      )
+    );
+
+  } catch {
+    return false;
   }
+}
 
-  function isWebGLAvailable() {
-    try {
-      const canvas = document.createElement('canvas');
+function showWebGLError() {
+  if (!container) return;
 
-      return !!(
-        window.WebGLRenderingContext &&
-        (
-          canvas.getContext('webgl2') ||
-          canvas.getContext('webgl')
-        )
-      );
-    } catch {
-      return false;
-    }
-  }
+  container.innerHTML = `
+    <div class="w-full h-full flex items-center justify-center p-6">
+      <div class="max-w-md text-center">
+        <h2 class="text-xl font-bold mb-2">
+          3D Graphics Unavailable
+        </h2>
 
-  function showWebGLError() {
-    if (!container) return;
-
-    container.innerHTML = `
-      <div class="w-full h-full flex items-center justify-center p-6">
-        <div class="max-w-md text-center">
-          <h2 class="text-xl font-bold mb-2">
-            3D Graphics Unavailable
-          </h2>
-
-          <p class="text-gray-600">
-            This device or browser does not support the graphics features
-            required to run this simulation.
-          </p>
-        </div>
+        <p class="text-gray-600">
+          This device or browser does not support the graphics
+          features required to run this simulation.
+        </p>
       </div>
-    `;
-  }
+    </div>
+  `;
+}
 
-  init();
-  if (initialized){
-    requestAnimationFrame(animate);
-  }
+init();
+
+if (initialized) {
+  requestAnimationFrame(animate);
+}
 </script>
