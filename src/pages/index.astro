@@ -11,6 +11,10 @@ const featuredProjectIds = ['micromouse/micromouse', 'balance-bot/balance-bot', 
 const featuredProjects = allProjects.filter(project => 
   featuredProjectIds.includes(project.id)
 );
+
+const events = (await getCollection('events')).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime()
+);
 ---
 
 <Layout title="Connor's Stuff" class="body">
@@ -42,133 +46,21 @@ const featuredProjects = allProjects.filter(project =>
   </section>
 
   <section class="awards-wrapper">
-    <h3 class="section-title">Awards & Events</h3>
-    <EventCard
-      event="CIRC 2026"
-      date="August 2026"
-      location="Drumheller, AB"
-      image="/blog/circ_2026.jpg"
-      description="University of Manitoba Robotics Team"
-    />
-    <EventCard
-      event="RoboWars 2026"
-      date="May 2026"
-      location="Montreal, QB"
-      image="/images/no-image.png"
-      description="UMIEEE/UMRT at Concordia University"
-    />
-    <EventCard
-      event="UMake 2026"
-      date="March 2026"
-      location="Winnipeg, MB"
-      image="/blog/umake_2026_1.webp"
-      description="First hardware hackathon at the University of Manitoba hosted by UMIEEE - Organizer"
-    />
-    <EventCard
-      event="WEC 2026"
-      date="January 2026"
-      location="Edmonton, AB"
-      image="/blog/wec_2026.webp"
-      description="Western Engineering Competition - Programming"
-    />
-    <EventCard
-      event="UMEC 2025"
-      date="October 2025"
-      location="Winnipeg, MB"
-      image="/blog/umec_2025.webp"
-      description="University of Manitoba Engineering Competition - Programming [1st Place]"
-    />
-    <EventCard
-      event="IEEEXtreme 2025"
-      date="October 2025"
-      location="Winnipeg, MB"
-      image="/images/no-image.png"
-      description=""
-    />
-    <EventCard
-      event="CIRC 2025"
-      date="August 2025"
-      location="Drumheller, AB"
-      image="/blog/circ_2025.webp"
-      description="University of Manitoba Robotics Team"
-    />
-    <EventCard
-      event="WEC 2025"
-      date="January 2025"
-      location="Saskatoon, SK"
-      image="/blog/wec_2025.webp"
-      description="Western Engineering Competition - Sr. Design"
-    />
-    <EventCard
-      event="CUSEC 2025"
-      date="January 2025"
-      location="Montreal, QB"
-      image="/blog/cusec_2025.webp"
-      description="Canadian University Software Engineering Conference"
-    />
-    <EventCard
-      event="IEEExtreme 2024"
-      date="October 2024"
-      location="Winnipeg, MB"
-      image="/images/no-image.png"
-      description=""
-    />
-    <EventCard
-      event="UMEC 2024"
-      date="October 2024"
-      location="Winnipeg, MB"
-      image="/blog/umec_2024.webp"
-      description="University of Manitoba Engineering Competition - Sr. Design [1st Place]"
-    />
-    <EventCard
-      event="CIRC 2024"
-      date="August 2024"
-      location="Drumheller, AB"
-      image="/blog/circ_2024.webp"
-      description="University of Manitoba Robotics Team"
-    />
-    <EventCard
-      event="CEC 2024"
-      date="March 2024"
-      location="Calgary, AB"
-      image="/blog/cec_2024.webp"
-      description="Canadian Engineering Competition - Programming [1st Place]"
-    />
-    <EventCard
-      event="WEC 2024"
-      date="January 2024"
-      location="Winnipeg, MB"
-      image="/blog/wec_2024.webp"
-      description="Western Engineering Competition - Programming [2nd Place]"
-    />
-    <EventCard
-      event="IEEExtreme 2023"
-      date="October 2023"
-      location="Winnipeg, MB"
-      image="/blog/ieeex_2023.jpg"
-      description=""
-    />
-    <EventCard
-      event="CUSEC 2023"
-      date="January 2023"
-      location="Montreal, QB"
-      image="/blog/cusec_2023.webp"
-      description="Canadian University Software Engineering Conference"
-    />
-    <EventCard
-      event="IEEExtreme 2022"
-      date="October 2022"
-      location="Winnipeg, MB"
-      image="/blog/ieeex_2022_0.webp"
-      description=""
-    />
-    <EventCard
-      event="UMEC 2022"
-      date="October 2022"
-      location="Winnipeg, MB"
-      image="/images/no-image.png"
-      description="University of Manitoba Engineering Competition - Programming"
-    />
+    <h3 class="section-title">Competitions & Events</h3>
+    <div class="w-full max-w-3xl mx-auto flex flex-col">
+      {events.map((event) => (
+        <EventCard
+          event={event.data.event}
+          date={event.data.date.toLocaleDateString('en-CA', {
+            year: 'numeric',
+            month: 'long',
+          })}
+          location={event.data.location}
+          image={event.data.image}
+          description={event.data.description}
+        />
+      ))}
+    </div>
   </section>
 </Layout>
 
