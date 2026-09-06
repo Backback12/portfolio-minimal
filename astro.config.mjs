@@ -4,6 +4,7 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import { unified } from '@astrojs/markdown-remark';
 import remarkAttributes from 'remark-attributes';
+import mdx from '@astrojs/mdx';
 
 export default defineConfig({
   site: 'https://connors-stuff.dev',
@@ -18,5 +19,6 @@ export default defineConfig({
   },
   devToolbar: {
     enabled: false
-  }
+  },
+  integrations: [mdx()],
 });
