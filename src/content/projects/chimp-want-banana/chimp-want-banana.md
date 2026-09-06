@@ -3,7 +3,7 @@ title: "Chimp Want Banana (Game Jam)"
 date: "2021"
 sortDate: "2021"
 order: 1
-image: "/projects/chimp.jpg"
+image: "./chimp.jpg"
 ---
 
 # Project

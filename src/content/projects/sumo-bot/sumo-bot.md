@@ -3,7 +3,7 @@ title: "SumoBot"
 date: "2026"
 sortDate: "2026"
 order: 1
-image: "/projects/sumo-bot.webp"
+image: "./sumo-bot.webp"
 ---
 
 # UMIEEE SumoBot

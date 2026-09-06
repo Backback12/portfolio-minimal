@@ -3,7 +3,7 @@ title: "Micromouse"
 date: "2025-2026"
 sortDate: "2026"
 order: 1
-image: "/projects/micromouse.jpg"
+image: "./micromouse.jpg"
 ---
 
 # Micromouse

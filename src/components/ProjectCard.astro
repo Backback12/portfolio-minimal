@@ -1,4 +1,7 @@
 ---
+import { Image } from 'astro:assets';
+import defaultImage from '/public/images/no-image.png';
+
 const { title, date, image, id } = Astro.props;
 const modalId = `modal-${id}`;
 
@@ -18,7 +21,11 @@ const closeModal = (id: string) => `
 
 <button onclick={openModal(modalId)} class="project-card">
   <div class="card-image-container">
-    <img src={image} class="w-full h-full object-cover" />
+     <Image
+        src={image ?? defaultImage}
+        alt={title}
+        class="w-full h-full object-cover"
+      />
   </div>
   <div class="card-content">
     <div class="card-date">{date}</div>

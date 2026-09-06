@@ -1,8 +1,8 @@
 ---
 title: "UMToday: Robotics team builds success"
-date: "2026"
-description: "UMToday Story about the University of Manitoba Robotics Team"
-image: "https://umtoday.ca/sites/default/files/styles/3_2_scale_and_crop_xlarge/public/images/UMRT_STUDENTS_WORKING.webp"
+date: "2026-08-05"
+description: "UMToday article about the University of Manitoba Robotics Team"
+image: "./UMRT_STUDENTS_WORKING.webp"
 ---
 
 
