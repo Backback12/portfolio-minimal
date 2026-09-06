@@ -1,10 +1,18 @@
 ---
+import { Image } from 'astro:assets';
+import defaultImage from '/public/images/no-image.png';
+
 const { event, date, location, image, description } = Astro.props;
 ---
 <div class="grid grid-cols-[auto_1fr_auto] gap-4 sm:gap-6 w-full max-w-2xl mx-auto mb-4 items-start text-black">
   
   <div class="w-32 h-24 bg-gray-50 border-2 border-black flex items-center justify-center overflow-hidden flex-shrink-0">
-     <img src={image} alt={event} class="w-full h-full object-cover" />
+     <!-- <img src={image} alt={event} class="w-full h-full object-cover" /> -->
+     <Image
+        src={image ?? defaultImage}
+        alt={event}
+        class="w-full h-full object-cover"
+      />
   </div>
   
   <div class="text-left flex flex-col justify-start">

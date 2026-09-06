@@ -41,7 +41,22 @@ const eventsCollection = defineCollection({
       event: z.string(),
       date: z.coerce.date(),
       location: z.string(),
-      image: z.string(),
+      image: image().optional(),
+      description: z.string(),
+    }),
+});
+
+const galleryCollection = defineCollection({
+  loader: glob({
+    pattern: '**/*.{mdx,md}',
+    base: './src/content/gallery',
+  }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      date: z.coerce.date(),
+      location: z.string(),
+      image: image(),
       description: z.string(),
     }),
 });
@@ -50,4 +65,5 @@ export const collections = {
   projects: projectsCollection,
   blog: blogCollection,
   events: eventsCollection,
+  gallery: galleryCollection,
 };

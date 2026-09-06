@@ -1,6 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import GalleryCard from '../components/GalleryCard.astro';
+
+import { getCollection } from 'astro:content';
+
+const gallery = (await getCollection('gallery')).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime()
+);
 ---
 
 <Layout title="Photo Gallery">
@@ -10,34 +16,20 @@ import GalleryCard from '../components/GalleryCard.astro';
   </div>
 
   <div class="gallery-grid">
-    <GalleryCard
-      title="PanUp.webp"
-      date="August 2025"
-      location="Drumheller, AB"
-      image="/gallery/PanUp.webp"
-      description="Drone footage taken at CIRC 2024."
-    />
-    <GalleryCard
-      title="QuickSpin.webp"
-      date="August 2025"
-      location="Drumheller, AB"
-      image="/gallery/QuickSpin.webp"
-      description="Drone footage taken at CIRC 2024."
-    />
-    <GalleryCard
-      title="SpeedOver.webp"
-      date="August 2025"
-      location="Drumheller, AB"
-      image="/gallery/SpeedOver.webp"
-      description="Drone footage taken at CIRC 2024."
-    />
-    <GalleryCard
-      title="ZoomOutClip.webp"
-      date="August 2025"
-      location="Drumheller, AB"
-      image="/gallery/ZoomOutClip.webp"
-      description="Drone footage taken at CIRC 2024."
-    />
+    <!-- <div class="w-full max-w-3xl mx-auto flex flex-col"> -->
+      {gallery.map((item) => (
+        <GalleryCard
+          title={item.data.title}
+          date={item.data.date.toLocaleDateString('en-CA', {
+            year: 'numeric',
+            month: 'long',
+          })}
+          location={item.data.location}
+          image={item.data.image}
+          description={item.data.description}
+        />
+      ))}
+    <!-- </div> -->
   </div>
 </Layout>
 
