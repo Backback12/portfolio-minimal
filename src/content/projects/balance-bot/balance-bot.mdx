@@ -1,0 +1,33 @@
+---
+title: "Balance Bot"
+date: "2025-2026"
+sortDate: "2026"
+order: 1
+image: "./balance-bot_1.png"
+
+---
+import { Image } from 'astro:assets';
+import balanceLegs from './balance_legs.webp';
+import balancing from './balancing.webp';
+import balancingFace from './balancing_face.webp';
+
+# Balance Bot
+This project started around mid 2025. An inverted pendulum or balance bot would be cool to work on.
+
+I added some actuating legs that could extend and change height independently, to add some more dynamic capabilities.
+
+I also added a 2-axis head and a face for personality.
+
+
+<Image src={balanceLegs} alt="Balance bot with actuating legs" class="w-[50px] mx-auto" />
+
+<div class="flex">
+    <Image src={balancing} alt="Balance bot balancing" class="w-1/2" />
+    <Image src={balancingFace} alt="Balance bot with animated face" class="w-1/2" />
+</div>
+
+
+Upcoming upgrades:
+* Custom PCB
+* BLDC Motors
+* Stronger or more compact servos

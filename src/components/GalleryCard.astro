@@ -1,11 +1,14 @@
 ---
-interface Props {
-  title: string;
-  date: string;
-  location: string;
-  image: string;
-  description: string;
-}
+// interface Props {
+//   title: string;
+//   date: string;
+//   location: string;
+//   image: string;
+//   description: string;
+// }
+
+import { Image } from 'astro:assets';
+import defaultImage from '/public/images/no-image.png';
 
 const { title, date, location, image, description } = Astro.props;
 ---
@@ -13,7 +16,12 @@ const { title, date, location, image, description } = Astro.props;
 <div class="gallery-card">
   <div class="image-container">
     <!-- <img src={image} alt={title} loading="lazy" /> -->
-    <img src={image} class="w-full h-full object-cover" loading="lazy" />
+    <!-- <img src={image} class="w-full h-full object-cover" loading="lazy" /> -->
+    <Image
+        src={image ?? defaultImage}
+        alt={title}
+        class="w-full h-full object-cover"
+      />
   </div>
   <div class="card-content">
     <!-- <div class="meta-row">

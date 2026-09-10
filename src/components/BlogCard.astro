@@ -1,6 +1,15 @@
 ---
+import { Image } from 'astro:assets';
+import defaultImage from '/public/images/no-image.png';
+
 const { title, date, description, image } = Astro.props;
 const modalId = `modal-blog-${title}`;
+
+const formattedDate = date.toLocaleDateString('en-CA', {
+  year: 'numeric',
+  month: 'long',
+  // day: 'numeric',
+});
 ---
 
 <button 
@@ -8,11 +17,14 @@ const modalId = `modal-blog-${title}`;
   class="group flex flex-col sm:flex-row items-center w-full border-2 border-black p-4 sm:p-6 mb-6 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all bg-white text-left cursor-pointer"
 >
   <div class="w-full sm:w-32 h-24 border-2 border-black bg-gray-50 flex-shrink-0 mb-4 sm:mb-0 sm:mr-6 flex items-center justify-center overflow-hidden">
-     <!-- <span class="text-gray-400 text-xs font-bold">[ Img ]</span> -->
-     <img class="image" src={image} alt={title} />
+    <Image
+        src={image ?? defaultImage}
+        alt={title}
+        class="w-full h-full object-cover"
+      />
   </div>
   <div class="flex-grow">
-    <div class="text-xs font-bold uppercase tracking-widest mb-1 text-gray-500">{date}</div>
+    <div class="text-xs font-bold uppercase tracking-widest mb-1 text-gray-500">{formattedDate}</div>
     <h3 class="text-xl font-black mb-2">{title}</h3>
     <p class="text-sm font-medium text-gray-700">{description}</p>
   </div>
@@ -22,7 +34,7 @@ const modalId = `modal-blog-${title}`;
   <div class="p-8 md:p-12 max-h-[85vh] overflow-y-auto">
     <button onclick={`document.getElementById('${modalId}').close()`} class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center border-2 border-black hover:bg-gray-100 font-bold text-xl cursor-pointer bg-white">✕</button>
     <div class="mb-8 border-b-2 border-black pb-6 text-center mt-4">
-      <div class="text-sm font-bold uppercase tracking-widest mb-2 text-gray-500">{date}</div>
+      <div class="text-sm font-bold uppercase tracking-widest mb-2 text-gray-500">{formattedDate}</div>
       <h2 class="text-3xl font-black">{title}</h2>
     </div>
     <div class="prose prose-black max-w-none text-left">
