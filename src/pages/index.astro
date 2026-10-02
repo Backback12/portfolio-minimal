@@ -6,7 +6,7 @@ import { getCollection, render } from 'astro:content';
 
 const allProjects = await getCollection('projects');
 
-const featuredProjectIds = ['micromouse/micromouse', 'balance-bot/balance-bot', 'sumo-bot/sumo-bot'];
+const featuredProjectIds = ['digital-clock/digital-clock', 'micromouse/micromouse', 'balance-bot/balance-bot', 'sumo-bot/sumo-bot'];
 
 const featuredProjects = allProjects.filter(project => 
   featuredProjectIds.includes(project.id)
@@ -51,10 +51,7 @@ const events = (await getCollection('events')).sort(
       {events.map((event) => (
         <EventCard
           event={event.data.event}
-          date={event.data.date.toLocaleDateString('en-CA', {
-            year: 'numeric',
-            month: 'long',
-          })}
+          date={event.data.date.toLocaleDateString('en-CA', {year: 'numeric', month: 'long', timeZone: 'UTC' })}
           location={event.data.location}
           image={event.data.image}
           description={event.data.description}
