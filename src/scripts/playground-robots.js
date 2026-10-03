@@ -462,18 +462,18 @@ function onPointerUp(event) {
 }
 
 function onWheel(event) {
-  event.preventDefault();
+  // event.preventDefault();
 
-  if (highlightedAgent) return;
+  // if (highlightedAgent) return;
 
-  targetDistance += event.deltaY * 0.02;
+  // targetDistance += event.deltaY * 0.02;
 
-  targetDistance =
-    THREE.MathUtils.clamp(
-      targetDistance,
-      MIN_DISTANCE,
-      MAX_DISTANCE
-    );
+  // targetDistance =
+  //   THREE.MathUtils.clamp(
+  //     targetDistance,
+  //     MIN_DISTANCE,
+  //     MAX_DISTANCE
+  //   );
 }
 
 /* -------------------------------------------------------------------------- */

@@ -987,7 +987,7 @@
       );
     } else if (player) {
       setStatus(
-        `Waiting for ${player === 'red' ? 'Red' : 'Yellow'}...`,
+        `Waiting for Connor's turn...`,
         player
       );
     } else {
@@ -1353,8 +1353,6 @@
     if (wasClick && !DEBUG_FOUR_CORNERS) {
       if (gameOver) {
         if (ONLINE_PLAY) {
-          // The server is authoritative. A client does not locally
-          // erase the online board because polling would restore it.
           fetchBoardState(true);
         } else {
           clearBoard();
@@ -1383,13 +1381,13 @@
   }
 
   function onWheel(event) {
-    event.preventDefault();
-    targetDistance += event.deltaY * ZOOM_SENSITIVITY;
-    targetDistance = THREE.MathUtils.clamp(
-      targetDistance,
-      CAMERA_MIN_DISTANCE,
-      CAMERA_MAX_DISTANCE
-    );
+    // event.preventDefault();
+    // targetDistance += event.deltaY * ZOOM_SENSITIVITY;
+    // targetDistance = THREE.MathUtils.clamp(
+    //   targetDistance,
+    //   CAMERA_MIN_DISTANCE,
+    //   CAMERA_MAX_DISTANCE
+    // );
   }
 
   /* -------------------------------------------------------------------------- */
@@ -1575,3 +1573,5 @@
       requestAnimationFrame(animate);
     }
   });
+
+  fetchBoardState();
