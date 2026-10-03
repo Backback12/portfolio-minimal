@@ -60,6 +60,38 @@
   // four grid corners and gameplay interaction is disabled.
   const DEBUG_FOUR_CORNERS = false;
 
+  // Online multiplayer / Supabase.
+  // When true, the server/database is authoritative for the board state.
+  const ONLINE_PLAY = true;
+  const ONLINE_POLL_INTERVAL_MS = 5000;
+  const ONLINE_GAME_STATE_ID = 1;
+
+  // This client is the "public" player represented by server turn value 1.
+  // The legacy client treated turn value 0 as the other player's turn.
+  const ONLINE_LOCAL_PLAYER = 'red';
+  const ONLINE_LOCAL_TURN_VALUE = 1;
+  const ONLINE_REMOTE_TURN_VALUE = 2;
+
+  // The legacy database stores board rows as 6 arrays of 7 cells.
+  // true  = server row 0 is the TOP row.
+  // false = server row 0 is the BOTTOM row.
+  const SERVER_ROW_ZERO_IS_TOP = true;
+
+  // Astro exposes variables prefixed with PUBLIC_ to the browser bundle.
+  const SUPABASE_URL =
+    import.meta.env.PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
+
+  const SUPABASE_PUBLISHABLE_KEY =
+    import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  const GAME_STATE_REST_URL = SUPABASE_URL
+    ? `${SUPABASE_URL}/rest/v1/game_state?id=eq.${ONLINE_GAME_STATE_ID}&select=*`
+    : null;
+
+  const EDGE_FUNCTION_URL = SUPABASE_URL
+    ? `${SUPABASE_URL}/functions/v1/connect4`
+    : null;
+
   // Win animation.
   const WIN_BLINK_PERIOD_MS = 320;
   const DROP_DURATION_MS = 500;
@@ -74,6 +106,8 @@
 
   let container;
   let statusElement;
+  let publicScoreElement;
+  let ownerScoreElement;
   let scene;
   let camera;
   let renderer;
@@ -106,6 +140,16 @@
   const localIntersection = new THREE.Vector3();
 
   let hoveredColumn = null;
+
+  // Online state.
+  let onlinePollInterval = null;
+  let onlinePollInFlight = false;
+  let onlineMovePending = false;
+  let onlineReady = !ONLINE_PLAY;
+  let onlineHasInitialState = false;
+  let onlineServerTurn = null;
+  let onlinePublicScore = 0;
+  let onlineOwnerScore = 0;
 
   let isDragging = false;
   let dragStart = { x: 0, y: 0 };
@@ -148,6 +192,8 @@
   async function init() {
     container = document.getElementById('connect-four-container');
     statusElement = document.getElementById('connect-four-status');
+    publicScoreElement = document.getElementById('connect-public-score');
+    ownerScoreElement = document.getElementById('connect-owner-score');
 
     if (!container || !statusElement) return;
 
@@ -194,7 +240,10 @@
       resizeObserver.observe(container);
 
       initialized = true;
-      setStatus('Loading Connect Four...', 'neutral');
+      setStatus(
+        ONLINE_PLAY ? 'Connecting to game server...' : 'Loading Connect Four...',
+        'neutral'
+      );
 
       await loadModels();
       modelsReady = true;
@@ -202,6 +251,13 @@
       if (DEBUG_FOUR_CORNERS) {
         createDebugPieces();
         setStatus('Debug mode: four corner pieces', 'neutral');
+      } else if (ONLINE_PLAY) {
+        createPreviewPiece();
+        updatePreview();
+
+        // Load the authoritative state before accepting input.
+        await fetchBoardState(true);
+        startOnlinePolling();
       } else {
         createPreviewPiece();
         updatePreview();
@@ -362,7 +418,13 @@
   }
 
   function updatePreview() {
-    if (!previewPiece || gameOver || isDropping || DEBUG_FOUR_CORNERS) {
+    if (
+      !previewPiece ||
+      gameOver ||
+      isDropping ||
+      DEBUG_FOUR_CORNERS ||
+      (ONLINE_PLAY && !canLocalPlayerMove())
+    ) {
       if (previewPiece) previewPiece.visible = false;
       return;
     }
@@ -395,6 +457,13 @@
       return;
     }
 
+    if (ONLINE_PLAY) {
+      if (!canLocalPlayerMove()) return;
+
+      submitOnlineMove(column);
+      return;
+    }
+
     const row = boardState[column].findIndex((value) => value === null);
     if (row < 0) return;
 
@@ -402,6 +471,17 @@
     boardState[column][row] = player;
 
     const piece = clonePieceModel(player);
+    animatePieceIntoCell(piece, column, row, player, true);
+  }
+
+  function animatePieceIntoCell(
+    piece,
+    column,
+    row,
+    player,
+    checkGameState,
+    onComplete = null
+  ) {
     const startPosition = getGridPosition(column, GRID_ROWS - 1);
     startPosition.y =
       GRID_ORIGIN_Y +
@@ -414,6 +494,7 @@
     piece.position.copy(startPosition);
     piece.visible = true;
     boardRoot.add(piece);
+
     placedPieces.push({
       piece,
       column,
@@ -422,6 +503,7 @@
     });
 
     isDropping = true;
+
     if (previewPiece) previewPiece.visible = false;
 
     const dropStartTime = performance.now();
@@ -444,9 +526,15 @@
       piece.position.copy(endPosition);
       isDropping = false;
 
+      if (!checkGameState) {
+        if (onComplete) onComplete();
+        updatePreview();
+        return;
+      }
+
       const winningCells = findWinningCells(column, row, player);
       if (winningCells.length > 0) {
-        finishGameWithWinner(winningCells);
+        finishGameWithWinner(winningCells, player);
         return;
       }
 
@@ -490,9 +578,500 @@
     gameOver = false;
     isDropping = false;
     winBlinkOn = true;
+    hoveredColumn = null;
 
     createPreviewPiece();
-    setStatus("Red's turn", 'red');
+
+    if (ONLINE_PLAY) {
+      updateOnlineStatus();
+    } else {
+      setStatus("Red's turn", 'red');
+    }
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                              ONLINE SYNC                                   */
+  /* -------------------------------------------------------------------------- */
+
+  function canLocalPlayerMove() {
+    return (
+      !ONLINE_PLAY ||
+      (
+        onlineReady &&
+        !onlineMovePending &&
+        !gameOver &&
+        onlineServerTurn === ONLINE_LOCAL_TURN_VALUE
+      )
+    );
+  }
+
+  function serverValueToPlayer(value) {
+    if (value === 1 || value === '1') return 'red';
+    if (value === 2 || value === '2') return 'yellow';
+    return null;
+  }
+
+  function turnValueToPlayer(value) {
+    if (value === ONLINE_LOCAL_TURN_VALUE) {
+      return ONLINE_LOCAL_PLAYER;
+    }
+
+    if (value === ONLINE_REMOTE_TURN_VALUE) {
+      return ONLINE_LOCAL_PLAYER === 'red' ? 'yellow' : 'red';
+    }
+
+    return null;
+  }
+
+  function convertServerBoard(serverBoard) {
+    if (!Array.isArray(serverBoard)) {
+      throw new Error('Server board is not an array.');
+    }
+
+    const nextBoard = Array.from(
+      { length: GRID_COLUMNS },
+      () => Array(GRID_ROWS).fill(null)
+    );
+
+    for (let serverRow = 0; serverRow < GRID_ROWS; serverRow++) {
+      const rowData = serverBoard[serverRow];
+
+      if (!Array.isArray(rowData)) {
+        throw new Error(`Server board row ${serverRow} is invalid.`);
+      }
+
+      for (let column = 0; column < GRID_COLUMNS; column++) {
+        const localRow = SERVER_ROW_ZERO_IS_TOP
+          ? GRID_ROWS - 1 - serverRow
+          : serverRow;
+
+        nextBoard[column][localRow] =
+          serverValueToPlayer(rowData[column]);
+      }
+    }
+
+    return nextBoard;
+  }
+
+  function boardsEqual(a, b) {
+    if (a.length !== b.length) return false;
+
+    for (let column = 0; column < GRID_COLUMNS; column++) {
+      for (let row = 0; row < GRID_ROWS; row++) {
+        if (a[column][row] !== b[column][row]) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  function getBoardDifferences(nextBoard) {
+    const additions = [];
+    let requiresRebuild = false;
+
+    for (let column = 0; column < GRID_COLUMNS; column++) {
+      for (let row = 0; row < GRID_ROWS; row++) {
+        const previous = boardState[column][row];
+        const next = nextBoard[column][row];
+
+        if (previous === null && next !== null) {
+          additions.push([column, row, next]);
+        } else if (previous !== next) {
+          requiresRebuild = true;
+        }
+      }
+    }
+
+    return {
+      additions,
+      requiresRebuild
+    };
+  }
+
+  function clearVisualPieces() {
+    for (const entry of placedPieces) {
+      boardRoot.remove(entry.piece);
+    }
+
+    placedPieces.length = 0;
+    winningPieces.clear();
+  }
+
+  function rebuildVisualBoard() {
+    clearVisualPieces();
+
+    for (let column = 0; column < GRID_COLUMNS; column++) {
+      for (let row = 0; row < GRID_ROWS; row++) {
+        const player = boardState[column][row];
+
+        if (!player) continue;
+
+        const piece = clonePieceModel(player);
+        piece.position.copy(
+          getGridPosition(column, row)
+        );
+
+        boardRoot.add(piece);
+
+        placedPieces.push({
+          piece,
+          column,
+          row,
+          player
+        });
+      }
+    }
+  }
+
+  function findAnyWinningLine() {
+    for (let column = 0; column < GRID_COLUMNS; column++) {
+      for (let row = 0; row < GRID_ROWS; row++) {
+        const player = boardState[column][row];
+
+        if (!player) continue;
+
+        const winningCells =
+          findWinningCells(column, row, player);
+
+        if (winningCells.length >= 4) {
+          return {
+            winningCells,
+            player
+          };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function applyServerGameState(serverTurn) {
+    onlineServerTurn = serverTurn;
+    currentPlayer =
+      turnValueToPlayer(serverTurn) || currentPlayer;
+
+    const winningLine = findAnyWinningLine();
+
+    if (winningLine) {
+      finishGameWithWinner(
+        winningLine.winningCells,
+        winningLine.player
+      );
+      return;
+    }
+
+    if (isBoardFull()) {
+      gameOver = true;
+      winningPieces.clear();
+      setStatus(
+        'Draw — waiting for server reset',
+        'neutral'
+      );
+      return;
+    }
+
+    gameOver = false;
+    winningPieces.clear();
+    updateOnlineStatus();
+    updatePreview();
+  }
+
+  async function fetchBoardState(force = false) {
+    if (!ONLINE_PLAY) return;
+
+    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+      onlineReady = false;
+      setStatus(
+        'Online mode is missing Supabase configuration.',
+        'neutral'
+      );
+      return;
+    }
+
+    if (
+      onlinePollInFlight &&
+      !force
+    ) {
+      return;
+    }
+
+    onlinePollInFlight = true;
+
+    try {
+      const response = await fetch(
+        GAME_STATE_REST_URL,
+        {
+          method: 'GET',
+          headers: {
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            Accept: 'application/json',
+            'Cache-Control': 'no-cache'
+          },
+          cache: 'no-store'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Game state request failed (${response.status}).`
+        );
+      }
+
+      const data = await response.json();
+
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error('Game state was not returned.');
+      }
+
+      const state = data[0];
+
+      if (
+        !Array.isArray(state.board) ||
+        typeof state.current_turn === 'undefined'
+      ) {
+        throw new Error('Game state response is missing fields.');
+      }
+
+      const nextBoard =
+        convertServerBoard(state.board);
+
+      const turnValue =
+        Number(state.current_turn);
+
+      if (!onlineHasInitialState) {
+        boardState = nextBoard;
+        rebuildVisualBoard();
+        onlineHasInitialState = true;
+        onlineServerTurn = turnValue;
+        onlineReady = true;
+        applyServerGameState(turnValue);
+        return;
+      }
+
+      const {
+        additions,
+        requiresRebuild
+      } = getBoardDifferences(nextBoard);
+
+      onlinePublicScore = Number(state.public_score) || 0;
+
+      onlineOwnerScore = Number(state.owner_score) || 0;
+
+      updateScoreDisplay();
+
+      onlineReady = true;
+
+      if (requiresRebuild) {
+        boardState = nextBoard;
+        rebuildVisualBoard();
+        isDropping = false;
+      } else if (
+        additions.length > 0
+      ) {
+        boardState = nextBoard;
+        isDropping = true;
+
+        let remaining = additions.length;
+
+        const onAnimationComplete = () => {
+          remaining--;
+
+          if (remaining <= 0) {
+            isDropping = false;
+            applyServerGameState(turnValue);
+          }
+        };
+
+        for (
+          const [column, row, player]
+          of additions
+        ) {
+          const piece = clonePieceModel(player);
+
+          animatePieceIntoCell(
+            piece,
+            column,
+            row,
+            player,
+            false,
+            onAnimationComplete
+          );
+        }
+
+        onlineServerTurn = turnValue;
+        currentPlayer =
+          turnValueToPlayer(turnValue) || currentPlayer;
+
+        updatePreview();
+        return;
+      } else if (!boardsEqual(boardState, nextBoard)) {
+        boardState = nextBoard;
+        rebuildVisualBoard();
+        isDropping = false;
+      }
+
+      applyServerGameState(turnValue);
+    } catch (error) {
+      console.error('Failed to fetch Connect Four state:', error);
+
+      onlineReady = false;
+
+      setStatus(
+        'Unable to reach the game server.',
+        'neutral'
+      );
+    } finally {
+      onlinePollInFlight = false;
+    }
+  }
+
+  function startOnlinePolling() {
+    if (!ONLINE_PLAY || onlinePollInterval) {
+      return;
+    }
+
+    onlinePollInterval = window.setInterval(
+      () => fetchBoardState(false),
+      ONLINE_POLL_INTERVAL_MS
+    );
+
+    window.addEventListener(
+      'pagehide',
+      stopOnlinePolling,
+      { once: true }
+    );
+  }
+
+  function stopOnlinePolling() {
+    if (onlinePollInterval) {
+      window.clearInterval(
+        onlinePollInterval
+      );
+      onlinePollInterval = null;
+    }
+  }
+
+  function updateOnlineStatus() {
+    if (!ONLINE_PLAY) return;
+
+    if (!onlineReady) {
+      setStatus(
+        'Connecting to game server...',
+        'neutral'
+      );
+      return;
+    }
+
+    if (onlineMovePending) {
+      setStatus(
+        'Submitting move...',
+        'neutral'
+      );
+      return;
+    }
+
+    if (gameOver) {
+      return;
+    }
+
+    const player = turnValueToPlayer(
+      onlineServerTurn
+    );
+
+    if (player === ONLINE_LOCAL_PLAYER) {
+      setStatus(
+        `Your turn (${player === 'red' ? 'Red' : 'Yellow'})`,
+        player
+      );
+    } else if (player) {
+      setStatus(
+        `Waiting for ${player === 'red' ? 'Red' : 'Yellow'}...`,
+        player
+      );
+    } else {
+      setStatus(
+        'Waiting for server...',
+        'neutral'
+      );
+    }
+  }
+
+  async function submitOnlineMove(column) {
+    if (
+      onlineMovePending ||
+      !canLocalPlayerMove()
+    ) {
+      return;
+    }
+
+    onlineMovePending = true;
+
+    if (previewPiece) {
+      previewPiece.visible = false;
+    }
+
+    updateOnlineStatus();
+
+    try {
+      const response = await fetch(
+        `${EDGE_FUNCTION_URL}?slot=${column}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: SUPABASE_PUBLISHABLE_KEY
+          }
+        }
+      );
+
+      const contentType =
+        response.headers.get('content-type') || '';
+
+      let result = null;
+      let responseText = '';
+
+      if (
+        contentType.includes('application/json')
+      ) {
+        result = await response.json();
+      } else {
+        responseText = await response.text();
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+          responseText ||
+          `Move request failed (${response.status}).`
+        );
+      }
+
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+
+      // The edge function response is only an acknowledgement.
+      // Fetch the actual database state and animate from that.
+      await fetchBoardState(true);
+    } catch (error) {
+      console.error(
+        'Connect Four move failed:',
+        error
+      );
+
+      setStatus(
+        error.message || 'Move failed.',
+        'neutral'
+      );
+
+      await fetchBoardState(true);
+    } finally {
+      onlineMovePending = false;
+      updateOnlineStatus();
+      updatePreview();
+    }
   }
 
   /* -------------------------------------------------------------------------- */
@@ -556,10 +1135,15 @@
     return result;
   }
 
-  function finishGameWithWinner(winningCells) {
+  function finishGameWithWinner(
+    winningCells,
+    winner = currentPlayer
+  ) {
     gameOver = true;
     isDropping = false;
     winningPieces.clear();
+
+    currentPlayer = winner;
 
     for (const [column, row] of winningCells) {
       const placed = placedPieces.find(
@@ -573,7 +1157,9 @@
 
     winBlinkOn = true;
     setStatus(
-      `${currentPlayer === 'red' ? 'Red' : 'Yellow'} wins — click here to reset`,
+      ONLINE_PLAY
+        ? `${currentPlayer === 'red' ? 'Red' : 'Yellow'} wins — waiting for server reset`
+        : `${currentPlayer === 'red' ? 'Red' : 'Yellow'} wins — click here to reset`,
       currentPlayer
     );
   }
@@ -766,7 +1352,13 @@
 
     if (wasClick && !DEBUG_FOUR_CORNERS) {
       if (gameOver) {
-        clearBoard();
+        if (ONLINE_PLAY) {
+          // The server is authoritative. A client does not locally
+          // erase the online board because polling would restore it.
+          fetchBoardState(true);
+        } else {
+          clearBoard();
+        }
       } else {
         const column = getColumnFromPointer(event);
         placePiece(column);
@@ -806,7 +1398,13 @@
 
   function setupStatusInteraction() {
     statusElement.addEventListener('click', () => {
-      if (gameOver) clearBoard();
+      if (!gameOver) return;
+
+      if (ONLINE_PLAY) {
+        fetchBoardState(true);
+      } else {
+        clearBoard();
+      }
     });
   }
 
@@ -831,6 +1429,18 @@
       statusElement.classList.add('text-yellow-600');
     } else {
       statusElement.classList.add('text-gray-700');
+    }
+  }
+
+  function updateScoreDisplay() {
+    if (publicScoreElement) {
+      publicScoreElement.textContent =
+        String(onlinePublicScore);
+    }
+
+    if (ownerScoreElement) {
+      ownerScoreElement.textContent =
+        String(onlineOwnerScore);
     }
   }
 
