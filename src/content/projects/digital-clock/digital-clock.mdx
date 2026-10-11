@@ -8,6 +8,7 @@ image: "./kicad-pcb.png"
 ---
 import { Image } from 'astro:assets';
 import kicad_pcb from './kicad-pcb.png';
+import sch_display from './sch_display.png'
 
 
 <Image src={kicad_pcb} alt="CAD of PCB" class="mx-auto" />
@@ -19,3 +20,31 @@ Build with 14/16 DIP ICs and using a 32.768 kHz crystal oscillator to keep time.
 No microcontrollers, or firmware.
 
 Made with KiCad.
+
+
+
+
+## Circuit
+*AS OF 2026-10-10 THIS STILL NEEDS TO BE TESTED AND VERIFIED*
+### 7 Segment Display
+Each display is powered by a **SN74LS247N** with a common annode 7 segment display with an array of resistors between each segment.
+<Image src={sch_display} alt="Display schematic for a single digit" class="mx-auto w-80" />
+
+### 1Hz Clock
+The clock was designed using a **CD4060BE** and a 32.768 crystal.
+The output only divided to 2Hz so an additional **CD4013BE** flip-flop was required to divide it into a 1Hz signal we can use for the clock.
+
+< Connor Insert image >
+
+### PWM
+PWM control was added to control the brightness of the 7 segment displays as well as the clock's colon LEDs. 
+It is designed using a **TLC555N** driving a **2N7000** transistor for the common cathode of all the LEDs.
+
+< Connor insert image >
+
+### Counter Logic
+The counting circuit was designed using a **CD4518BE** BCD (Binary-Coded Decimal) counter. This means it goes from 0-9 and after 9 it resets back to 0.
+Not all digits need to go from 0-9:
+ * Seconds Tens digit -> Need to reset after 0-5
+ * Minutes Tens digit -> Need to reset after 0-5
+ * Hour (ones and tens digit) -> Need to reset after hours reach 0-23
