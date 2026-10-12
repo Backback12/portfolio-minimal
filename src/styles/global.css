@@ -7,8 +7,9 @@ html {
   /* font-family: Georgia, 'Times New Roman', Times, serif; */
   /* font-family: "Times New Roman", Times, serif; */
   /* font-family: "Courier New", Courier, monospace; */
-  font-family: "Courier New", Courier, monospace;
+  /* font-family: "Courier New", Courier, monospace; */
   /* font-family: var(--ubuntu-mono), "Courier New", Courier, monospace; */
+  font-family: var(--font-cousine), "Courier New", Courier, monospace;
   /* Find something for Liberation Mono! */
 }
 

@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig, fontProviders } from 'astro/config';
 
 import tailwindcss from '@tailwindcss/vite';
 import { unified } from '@astrojs/markdown-remark';
@@ -21,4 +21,11 @@ export default defineConfig({
     enabled: false
   },
   integrations: [mdx()],
+  fonts: [
+    {
+      name: "Cousine",
+      provider: fontProviders.google(),
+      cssVariable: "--font-cousine",
+    },
+  ],
 });

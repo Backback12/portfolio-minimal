@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Agent } from '../utils/agent.js';
+import { Agent } from './agent.js';
 
 let container, scene, camera, renderer;
 let agents = [];
