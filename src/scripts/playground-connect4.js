@@ -784,7 +784,7 @@
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
       onlineReady = false;
       setStatus(
-        'Online mode is missing Supabase configuration.',
+        'Online mode is not configured.',
         'neutral'
       );
       return;

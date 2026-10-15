@@ -1,18 +1,29 @@
 ---
-title: "SumoBot"
+title: "UMIEEE SumoBot"
 date: "2026"
 sortDate: "2026"
 order: 1
 image: "./sumo-bot.webp"
 ---
+import { Image } from 'astro:assets';
+import sumo_fighting from './sumo-fighting.webp';
+import sumo_flying from './sumo-flying.webp';
+import sumo_spinning from './sumo-spinning.webp';
+
+<Image src={sumo_fighting} alt="Fighting Sumobot" class="mx-auto" />
 
 # UMIEEE SumoBot
 
-UMIEEE/UMRT Sumobot competed in the 2026 RoboWars Competition hosted by IEEE Concordia in Montreal, QB.
 
-The SumoBot uses a mixture of IR sensors at underneath the scoop and in front to identify the sumo ring as well as track the opponent sumobot. 
+UMIEEE/UMRT Sumobot competed in [RoboWars 2026](https://www.robowars.ca/) Competition hosted by IEEE Concordia in Montreal, QB.
 
-The microcontroller was an ESP32-S3 which was able to control the motor drivers and read the sensors on two different cores for optimal computing.
+The SumoBot uses a mixture of IR sensors underneath the scoop and facing forward to identify the sumo ring as well as the opponent sumobot. 
+
+The main controller is an ESP32-S3 to control the motor drivers, process the sensors, and perform our sumobot's strategies.
 
 
 UMIEEE was able to qualify for the final tournament and finished in the top 12 of about 23 teams.
+
+<Image src={sumo_spinning} alt="Draw between UMIEEE" class="mx-auto" />
+
+<Image src={sumo_flying} alt="Fun sumobot battle" class="mx-auto" />
