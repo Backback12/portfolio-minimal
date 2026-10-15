@@ -11,6 +11,12 @@ html {
   /* font-family: var(--ubuntu-mono), "Courier New", Courier, monospace; */
   font-family: var(--font-cousine), "Courier New", Courier, monospace;
   /* Find something for Liberation Mono! */
+  font-size: medium;
+}
+@media (max-width: 768px) {
+  html {
+    font-size: small; /* Regular font */
+  }
 }
 
 body {

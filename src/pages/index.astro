@@ -47,7 +47,7 @@ const events = (await getCollection('events')).sort(
 
   <section class="awards-wrapper">
     <h3 class="section-title">Competitions & Events</h3>
-    <div class="w-full max-w-3xl mx-auto flex flex-col max-h-[400px] overflow-y-auto bg-white border border-black py-5">
+    <div class="w-full max-w-3xl mx-auto flex flex-col max-h-[400px] overflow-y-auto bg-white border border-black p-1">
       {events.map((event) => (
         <EventCard
           event={event.data.event}
