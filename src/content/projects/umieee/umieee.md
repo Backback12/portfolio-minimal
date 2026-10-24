@@ -2,8 +2,8 @@
 title: "UMIEEE"
 date: "2025-2026"
 sortDate: "2025"
-order: 1
 # image: "./sumo-bot.webp"
+visible: false
 ---
 
 # UMIEEE Projects and Contribution
