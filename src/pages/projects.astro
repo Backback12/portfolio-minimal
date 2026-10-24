@@ -29,7 +29,7 @@ const projects = projectsSource.sort((a, b) => {
   </div>
 
   <div class="projects-grid" id="project-grid">
-    {projects.map(async (project) => {
+    {projects.filter(project => project.data.visible).map(async (project) => {
       const { Content } = await render(project);
       
       return (
@@ -37,7 +37,6 @@ const projects = projectsSource.sort((a, b) => {
           class="project-wrapper" 
           data-title={project.data.title.toLowerCase()} 
           data-date={project.data.sortDate ? new Date(project.data.sortDate).getTime() : 0}
-          data-order={project.data.order || 999}
         >
           <ProjectCard 
             title={project.data.title} 
