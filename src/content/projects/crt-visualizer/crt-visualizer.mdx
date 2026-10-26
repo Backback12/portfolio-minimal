@@ -2,11 +2,28 @@
 title: "CRT Audio Visualizer"
 date: "2025"
 sortDate: "2025"
-order: 1
 image: "./audio_visualizer.jpg"
 ---
+import { Image } from 'astro:assets';
+import audio_visualizer from './audio_visualizer.jpg';
+import audio_input_schem from './audio_input_schem.png';
+import pot_schem from './pot_schem.png';
 
+<Image src={audio_visualizer} alt="CRT Audio Visualizer" class="mx-auto" />
+### CRT Audio Visualizer
+[Audio Signal Analysis]
 
-### Project
+Parts:
+* ESP32 DevKitC
+* 13" CRT Display
 
-ESP32, 13" CRT Display, Audio Signal Analysis
+# Audio signal DC bias circuit
+Audio signals for this use case use an RMS voltage of 1.0 V, giving peak voltages of** ±1.414 V**. 
+For the ESP32 to safely read these signals, a DC bias circuit shifts the signal to a 1.65 V center point, 
+for a safe final peak to peak range from ** 0.24 V to 3.06 V.**
+<Image src={audio_input_schem} alt="Audio input schematic" class="mx-auto" />
+Note that this circuit is effectively a high-pass filter with a cut-off frequency at 31.8 Hz, 
+so the audio signals are not perfectly extracted.
+
+<Image src={pot_schem} alt="User input schematics" class="mx-auto" />
+
